@@ -358,7 +358,7 @@
   <main class="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
 
     <!-- ── KPI Cards Row ── -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
       <!-- Total Volume -->
       <div class="kpi-card kpi-blue">
@@ -382,19 +382,6 @@
         </div>
         <div class="text-xs mt-3 font-semibold" :class="uphStatus.cls" x-text="uphStatus.label"></div>
         <div class="text-xs text-gray-500 mt-1">LP Target: <span class="text-gray-300" x-text="lpUPH || '—'"></span></div>
-      </div>
-
-      <!-- Bagging Volume -->
-      <div class="kpi-card kpi-green">
-        <div class="text-xs text-green-400 font-semibold uppercase tracking-wider mb-1">Bagging / Packing</div>
-        <div class="flex items-end gap-2">
-          <div class="text-3xl font-black text-white" x-text="totalActualBag.toLocaleString()"></div>
-          <div class="text-sm text-gray-400 mb-1">/ <span x-text="totalGoalBag.toLocaleString()"></span></div>
-        </div>
-        <div class="progress-track mt-3">
-          <div class="progress-fill" style="background: linear-gradient(90deg,#2a8703,#6ddc40);" :style="'width:' + Math.min(100, totalGoalBag > 0 ? Math.round(totalActualBag/totalGoalBag*100) : 0) + '%'"></div>
-        </div>
-        <div class="text-xs text-gray-400 mt-1.5" x-text="totalGoalBag > 0 ? Math.round(totalActualBag/totalGoalBag*100) + '% of bag goal' : 'Enter bag data'"></div>
       </div>
 
       <!-- OTS Misses -->
