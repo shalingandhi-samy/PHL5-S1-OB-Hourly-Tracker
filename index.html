@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PHL5 — OB Shift Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Walmart Brand Tokens ── */
+    :root {
+      --blue-100: #0053e2;
+      --blue-110: #0046c0;
+      --blue-140: #00308a;
+      --spark-100: #ffc220;
+      --spark-10:  #fff8e1;
+      --spark-140: #995213;
+      --red-100:   #ea1100;
+      --red-10:    #fff0ee;
+      --green-100: #2a8703;
+      --green-10:  #edf7e8;
+      --gray-160:  #1a1a2e;
+      --gray-100:  #74767c;
+      --gray-50:   #c4c6cc;
+      --gray-10:   #f5f5f7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0e1a;
+      color: #e8eaf0;
+      min-height: 100vh;
+    }
+
+    /* ── Animated gradient header ── */
+    .header-gradient {
+      background: linear-gradient(135deg, #0a0e1a 0%, #0d1b3e 40%, #091a4a 70%, #0a0e1a 100%);
+      border-bottom: 2px solid var(--blue-100);
+      position: relative;
+      overflow: hidden;
+    }
+    .header-gradient::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 50%, rgba(0,83,226,0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(255,194,32,0.08) 0%, transparent 50%);
+      animation: shimmer 8s ease-in-out infinite alternate;
+    }
+    @keyframes shimmer {
+      0%   { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(2%, 2%) rotate(2deg); }
+    }
+
+    /* ── Glassmorphism cards ── */
+    .glass-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .glass-card:hover {
+      border-color: rgba(0,83,226,0.4);
+      box-shadow: 0 8px 32px rgba(0,83,226,0.15);
+    }
+
+    /* ── KPI Cards ── */
+    .kpi-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 14px 14px 0 0;
+    }
+    .kpi-blue::after  { background: var(--blue-100); }
+    .kpi-gold::after  { background: var(--spark-100); }
+    .kpi-green::after { background: var(--green-100); }
+    .kpi-red::after   { background: var(--red-100); }
+
+    /* ── Status Badges ── */
+    .badge-hit  { background: rgba(42,135,3,0.2);  color: #6ddc40; border: 1px solid rgba(42,135,3,0.4);  padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-miss { background: rgba(234,17,0,0.2);  color: #ff6b5a; border: 1px solid rgba(234,17,0,0.4);  padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-na   { background: rgba(255,255,255,0.06); color: #888; border: 1px solid rgba(255,255,255,0.1); padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+
+    /* ── Hour Profile Badges ── */
+    .profile-full    { background: rgba(0,83,226,0.2);   color: #7ab3ff; border: 1px solid rgba(0,83,226,0.3);   }
+    .profile-meal    { background: rgba(255,194,32,0.15); color: #ffd966; border: 1px solid rgba(255,194,32,0.3); }
+    .profile-break   { background: rgba(153,82,19,0.2);  color: #e8a96a; border: 1px solid rgba(153,82,19,0.3);  }
+    .profile-start   { background: rgba(42,135,3,0.15);  color: #8ee85e; border: 1px solid rgba(42,135,3,0.3);   }
+    .hour-badge { padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+
+    /* ── Editable inputs ── */
+    .data-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #e8eaf0;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      width: 72px;
+      padding: 6px 4px;
+      transition: border-color 0.2s, background 0.2s;
+      outline: none;
+    }
+    .data-input:focus {
+      border-color: var(--blue-100);
+      background: rgba(0,83,226,0.12);
+      box-shadow: 0 0 0 3px rgba(0,83,226,0.2);
+    }
+    .data-input::placeholder { color: rgba(255,255,255,0.25); }
+
+    /* ── Table styles ── */
+    .tracker-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .tracker-table th {
+      background: rgba(0,83,226,0.15);
+      color: #7ab3ff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 10px 8px;
+      text-align: center;
+      border-bottom: 1px solid rgba(0,83,226,0.3);
+      white-space: nowrap;
+    }
+    .tracker-table th:first-child { text-align: left; padding-left: 16px; border-radius: 10px 0 0 0; }
+    .tracker-table th:last-child  { border-radius: 0 10px 0 0; }
+    .tracker-table td {
+      padding: 8px 6px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .tracker-table td:first-child { text-align: left; padding-left: 16px; color: #a0aec0; font-size: 12px; font-weight: 600; }
+    .tracker-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .tracker-table .section-header td {
+      background: rgba(255,255,255,0.06);
+      color: #ffc220;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 6px 16px;
+    }
+
+    /* ── Capacity table ── */
+    .cap-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .cap-table th {
+      background: rgba(255,194,32,0.1);
+      color: #ffd966;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 12px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,194,32,0.2);
+    }
+    .cap-table th:first-child { text-align: left; }
+    .cap-table td {
+      padding: 12px 12px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    .cap-table td:first-child { text-align: left; font-weight: 700; font-size: 15px; }
+    .cap-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+    /* ── Progress bar ── */
+    .progress-track {
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      height: 8px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--blue-100), #4d9fff);
+      transition: width 0.5s ease;
+    }
+
+    /* ── Live clock pulse ── */
+    .pulse-dot {
+      width: 8px; height: 8px;
+      background: #6ddc40;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(109,220,64,0.4); }
+      50%       { opacity: 0.8; transform: scale(1.15); box-shadow: 0 0 0 6px rgba(109,220,64,0); }
+    }
+
+    /* ── Section divider ── */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      margin: 28px 0;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+    ::-webkit-scrollbar-thumb { background: rgba(0,83,226,0.4); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0,83,226,0.7); }
+
+    /* ── Chart wrapper ── */
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* ── Tag ── */
+    .site-tag {
+      background: linear-gradient(135deg, var(--blue-100), #003db3);
+      padding: 6px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(0,83,226,0.4);
+    }
+
+    /* ── Current hour highlight ── */
+    .current-hour td { background: rgba(0,83,226,0.08) !important; }
+    .current-hour td:first-child { color: #7ab3ff !important; }
+
+    /* ── Tooltip ── */
+    [data-tooltip] { position: relative; cursor: default; }
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e2640;
+      color: #e8eaf0;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      border: 1px solid rgba(255,255,255,0.1);
+      z-index: 999;
+    }
+    [data-tooltip]:hover::after { opacity: 1; }
+
+    /* ── Notes ── */
+    .notes-area {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      color: #c0c8d8;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      padding: 14px 16px;
+      width: 100%;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .notes-area:focus { border-color: var(--blue-100); box-shadow: 0 0 0 3px rgba(0,83,226,0.2); }
+  </style>
+
+  <script>
+    // ── Tailwind config (dark bg via inline styles anyway) ──
+    tailwind.config = { darkMode: 'class', theme: { extend: {} } };
+  </script>
+</head>
+<body x-data="dashboard()" x-init="init()" class="dark">
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- HEADER                                                     -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <header class="header-gradient sticky top-0 z-50">
+    <div class="relative z-10 flex items-center justify-between px-6 py-4 max-w-screen-2xl mx-auto">
+
+      <!-- Left: Logo + Site -->
+      <div class="flex items-center gap-4">
+        <!-- Walmart spark icon -->
+        <div class="flex-shrink-0">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <path d="M18 4 L20.5 14.5 L31 12 L23.5 19 L31 26 L20.5 23.5 L18 34 L15.5 23.5 L5 26 L12.5 19 L5 12 L15.5 14.5 Z" fill="#FFC220"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-xl font-black text-white tracking-tight">OB Shift Dashboard</h1>
+            <span class="site-tag">PHL5</span>
+          </div>
+          <p class="text-xs text-blue-300 font-medium mt-0.5">Next Gen Peak 2026 · Outbound Operations</p>
+        </div>
+      </div>
+
+      <!-- Center: Current hour indicator -->
+      <div class="hidden lg:flex items-center gap-3 glass-card px-5 py-2.5">
+        <div class="pulse-dot"></div>
+        <div class="text-sm">
+          <span class="text-gray-400 font-medium">Current Hour: </span>
+          <span class="text-white font-bold" x-text="currentHourLabel"></span>
+        </div>
+        <div class="w-px h-4 bg-white/10"></div>
+        <div class="text-sm">
+          <span class="text-gray-400 font-medium">Shift Progress: </span>
+          <span class="font-bold" :class="shiftPctColor" x-text="shiftProgress + '%'"></span>
+        </div>
+      </div>
+
+      <!-- Right: Clock + Date -->
+      <div class="text-right">
+        <div class="text-2xl font-black text-white tabular-nums" x-text="clock"></div>
+        <div class="text-xs text-blue-300 font-medium" x-text="dateStr"></div>
+        <div class="text-xs text-gray-500 mt-0.5">
+          Shift: <span class="text-white font-semibold">7:30 AM – 5:30 PM</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shift timeline bar -->
+    <div class="relative z-10 px-6 pb-3 max-w-screen-2xl mx-auto">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500 w-14 text-right flex-shrink-0">7:30 AM</span>
+        <div class="progress-track flex-1">
+          <div class="progress-fill" :style="'width:' + shiftProgress + '%'"></div>
+        </div>
+        <span class="text-xs text-gray-500 w-14 flex-shrink-0">5:30 PM</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- MAIN CONTENT                                               -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <main class="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- ── KPI Cards Row ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+      <!-- Total Volume -->
+      <div class="kpi-card kpi-blue">
+        <div class="text-xs text-blue-400 font-semibold uppercase tracking-wider mb-1">Total Volume</div>
+        <div class="flex items-end gap-2">
+          <div class="text-3xl font-black text-white" x-text="totalActualVol.toLocaleString()"></div>
+          <div class="text-sm text-gray-400 mb-1">/ <span x-text="totalGoalVol.toLocaleString()"></span></div>
+        </div>
+        <div class="progress-track mt-3">
+          <div class="progress-fill" :style="'width:' + Math.min(100, totalGoalVol > 0 ? Math.round(totalActualVol/totalGoalVol*100) : 0) + '%'"></div>
+        </div>
+        <div class="text-xs text-gray-400 mt-1.5" x-text="totalGoalVol > 0 ? Math.round(totalActualVol/totalGoalVol*100) + '% of goal' : 'Enter goal data'"></div>
+      </div>
+
+      <!-- Overall UPH -->
+      <div class="kpi-card kpi-gold">
+        <div class="text-xs text-yellow-400 font-semibold uppercase tracking-wider mb-1">Actual UPH</div>
+        <div class="flex items-end gap-2">
+          <div class="text-3xl font-black text-white" x-text="overallUPH"></div>
+          <div class="text-sm text-gray-400 mb-1">units/hr</div>
+        </div>
+        <div class="text-xs mt-3 font-semibold" :class="uphStatus.cls" x-text="uphStatus.label"></div>
+        <div class="text-xs text-gray-500 mt-1">LP Target: <span class="text-gray-300" x-text="lpUPH || '—'"></span></div>
+      </div>
+
+      <!-- Bagging Volume -->
+      <div class="kpi-card kpi-green">
+        <div class="text-xs text-green-400 font-semibold uppercase tracking-wider mb-1">Bagging / Packing</div>
+        <div class="flex items-end gap-2">
+          <div class="text-3xl font-black text-white" x-text="totalActualBag.toLocaleString()"></div>
+          <div class="text-sm text-gray-400 mb-1">/ <span x-text="totalGoalBag.toLocaleString()"></span></div>
+        </div>
+        <div class="progress-track mt-3">
+          <div class="progress-fill" style="background: linear-gradient(90deg,#2a8703,#6ddc40);" :style="'width:' + Math.min(100, totalGoalBag > 0 ? Math.round(totalActualBag/totalGoalBag*100) : 0) + '%'"></div>
+        </div>
+        <div class="text-xs text-gray-400 mt-1.5" x-text="totalGoalBag > 0 ? Math.round(totalActualBag/totalGoalBag*100) + '% of bag goal' : 'Enter bag data'"></div>
+      </div>
+
+      <!-- OTS Misses -->
+      <div class="kpi-card kpi-red">
+        <div class="text-xs text-red-400 font-semibold uppercase tracking-wider mb-1">OTS Misses</div>
+        <div class="flex items-end gap-2">
+          <div class="text-3xl font-black" :class="totalOTS > 0 ? 'text-red-400' : 'text-white'" x-text="totalOTS"></div>
+          <div class="text-sm text-gray-400 mb-1">total</div>
+        </div>
+        <div class="text-xs mt-3 font-semibold" :class="totalOTS === 0 ? 'text-green-400' : 'text-red-400'" x-text="totalOTS === 0 ? '✓ Zero misses — Great job!' : '⚠ Review cut times'"></div>
+        <div class="text-xs text-gray-500 mt-1">Productive hrs: <span class="text-gray-300">8.83</span></div>
+      </div>
+    </div>
+
+    <!-- ── Charts Row ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- Volume by Hour -->
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-bold text-white">Volume by Hour</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Goal vs Actual — all 11 time slots</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-sm" style="background:#0053e2"></div><span class="text-gray-400">Goal</span></div>
+            <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-sm" style="background:#ffc220"></div><span class="text-gray-400">Actual</span></div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="volumeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- UPH Trend -->
+      <div class="glass-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-bold text-white">UPH Trend</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Actual · ASRS Picking · Box Finish</p>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <div class="flex items-center gap-1.5"><div class="w-3 h-1 rounded-sm" style="background:#ffc220"></div><span class="text-gray-400">Actual</span></div>
+            <div class="flex items-center gap-1.5"><div class="w-3 h-1 rounded-sm" style="background:#0053e2"></div><span class="text-gray-400">ASRS</span></div>
+            <div class="flex items-center gap-1.5"><div class="w-3 h-1 rounded-sm" style="background:#2a8703"></div><span class="text-gray-400">Box</span></div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="uphChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Hourly Tracker Table ── -->
+    <div class="glass-card p-0 overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+        <div>
+          <h3 class="text-sm font-bold text-white">Hourly Tracker</h3>
+          <p class="text-xs text-gray-400 mt-0.5">Enter actuals to auto-calculate hit/miss & cumulative totals</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button @click="clearAll()" class="text-xs text-red-400 hover:text-red-300 font-semibold px-3 py-1.5 rounded-lg border border-red-900/40 hover:border-red-500/40 transition-colors">
+            Clear All
+          </button>
+          <button @click="exportCSV()" class="text-xs text-blue-300 hover:text-blue-200 font-semibold px-3 py-1.5 rounded-lg border border-blue-900/40 hover:border-blue-500/40 transition-colors">
+            ↓ Export CSV
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="tracker-table">
+          <thead>
+            <tr>
+              <th class="min-w-[160px]">Metric</th>
+              <template x-for="h in hours" :key="h.num">
+                <th class="min-w-[88px]">
+                  <div x-text="'Hr ' + h.num" class="font-black"></div>
+                  <div x-text="h.start" class="font-normal text-gray-400" style="font-size:10px;"></div>
+                  <div :class="h.profileClass" class="hour-badge mt-1 inline-block" x-text="h.profileLabel"></div>
+                </th>
+              </template>
+              <th class="min-w-[96px] text-yellow-300" style="background:rgba(255,194,32,0.12);border-left:1px solid rgba(255,194,32,0.2);">SHIFT TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <!-- SECTION: VOLUME -->
+            <tr class="section-header"><td colspan="13">📦 Volume</td></tr>
+
+            <!-- Goal Volume -->
+            <tr>
+              <td>Goal Volume</td>
+              <template x-for="(h, i) in hours" :key="'gv-'+i">
+                <td>
+                  <input type="number" class="data-input" x-model.number="rows.goalVol[i]" @input="update()" placeholder="0" min="0" />
+                </td>
+              </template>
+              <td class="font-bold text-blue-300" x-text="totalGoalVol.toLocaleString()"></td>
+            </tr>
+
+            <!-- Actual Volume -->
+            <tr>
+              <td>Actual Volume <span class="text-gray-600 text-xs">(Drax)</span></td>
+              <template x-for="(h, i) in hours" :key="'av-'+i">
+                <td>
+                  <input type="number" class="data-input" x-model.number="rows.actualVol[i]" @input="update()" placeholder="0" min="0" />
+                </td>
+              </template>
+              <td class="font-bold text-yellow-300" x-text="totalActualVol.toLocaleString()"></td>
+            </tr>
+
+            <!-- Volume Hit/Miss -->
+            <tr>
+              <td>Volume Hit/Miss</td>
+              <template x-for="(h, i) in hours" :key="'vm-'+i">
+                <td>
+                  <span :class="hitMissClass(rows.actualVol[i] - rows.goalVol[i], rows.goalVol[i])"
+                        :data-tooltip="rows.goalVol[i] > 0 ? (rows.actualVol[i] - rows.goalVol[i] >= 0 ? '+' : '') + (rows.actualVol[i] - rows.goalVol[i]) : 'No goal set'"
+                        x-text="rows.goalVol[i] > 0 ? (rows.actualVol[i] - rows.goalVol[i] >= 0 ? '▲ HIT' : '▼ MISS') : '—'">
+                  </span>
+                </td>
+              </template>
+              <td>
+                <span :class="hitMissClass(totalActualVol - totalGoalVol, totalGoalVol)"
+                      x-text="totalGoalVol > 0 ? (totalActualVol - totalGoalVol >= 0 ? '▲ HIT' : '▼ MISS') : '—'">
+                </span>
+              </td>
+            </tr>
+
+            <!-- Cumulative Hit/Miss -->
+            <tr>
+              <td>Cumm. Volume Δ</td>
+              <template x-for="(h, i) in hours" :key="'cv-'+i">
+                <td>
+                  <span class="text-xs font-mono font-bold"
+                        :class="cummVol[i] > 0 ? 'text-green-400' : cummVol[i] < 0 ? 'text-red-400' : 'text-gray-500'"
+                        x-text="cummVol[i] !== 0 || (rows.goalVol[i] > 0 || i > 0) ? (cummVol[i] >= 0 ? '+' : '') + cummVol[i].toLocaleString() : '—'">
+                  </span>
+                </td>
+              </template>
+              <td class="font-bold font-mono" :class="(totalActualVol-totalGoalVol) >= 0 ? 'text-green-400' : 'text-red-400'"
+                  x-text="totalGoalVol > 0 ? ((totalActualVol-totalGoalVol >= 0 ? '+' : '') + (totalActualVol-totalGoalVol).toLocaleString()) : '—'">
+              </td>
+            </tr>
+
+            <!-- SECTION: BAGGING -->
+            <tr class="section-header"><td colspan="13">🛍️ Bagging / Packing</td></tr>
+
+            <tr>
+              <td>Bagging Goal</td>
+              <template x-for="(h, i) in hours" :key="'bg-'+i">
+                <td><input type="number" class="data-input" x-model.number="rows.goalBag[i]" @input="update()" placeholder="0" min="0" /></td>
+              </template>
+              <td class="font-bold text-blue-300" x-text="totalGoalBag.toLocaleString()"></td>
+            </tr>
+
+            <tr>
+              <td>Actual Packing</td>
+              <template x-for="(h, i) in hours" :key="'ab-'+i">
+                <td><input type="number" class="data-input" x-model.number="rows.actualBag[i]" @input="update()" placeholder="0" min="0" /></td>
+              </template>
+              <td class="font-bold text-yellow-300" x-text="totalActualBag.toLocaleString()"></td>
+            </tr>
+
+            <tr>
+              <td>Bagging Hit/Miss</td>
+              <template x-for="(h, i) in hours" :key="'bm-'+i">
+                <td>
+                  <span :class="hitMissClass(rows.actualBag[i] - rows.goalBag[i], rows.goalBag[i])"
+                        x-text="rows.goalBag[i] > 0 ? (rows.actualBag[i] - rows.goalBag[i] >= 0 ? '▲ HIT' : '▼ MISS') : '—'">
+                  </span>
+                </td>
+              </template>
+              <td>
+                <span :class="hitMissClass(totalActualBag - totalGoalBag, totalGoalBag)"
+                      x-text="totalGoalBag > 0 ? (totalActualBag - totalGoalBag >= 0 ? '▲ HIT' : '▼ MISS') : '—'">
+                </span>
+              </td>
+            </tr>
+
+            <tr>
+              <td>Cumm. Bagging Δ</td>
+              <template x-for="(h, i) in hours" :key="'cb-'+i">
+                <td>
+                  <span class="text-xs font-mono font-bold"
+                        :class="cummBag[i] > 0 ? 'text-green-400' : cummBag[i] < 0 ? 'text-red-400' : 'text-gray-500'"
+                        x-text="cummBag[i] !== 0 || rows.goalBag[i] > 0 ? (cummBag[i] >= 0 ? '+' : '') + cummBag[i].toLocaleString() : '—'">
+                  </span>
+                </td>
+              </template>
+              <td class="font-bold font-mono" :class="(totalActualBag-totalGoalBag) >= 0 ? 'text-green-400' : 'text-red-400'"
+                  x-text="totalGoalBag > 0 ? ((totalActualBag-totalGoalBag >= 0 ? '+' : '') + (totalActualBag-totalGoalBag).toLocaleString()) : '—'">
+              </td>
+            </tr>
+
+            <!-- SECTION: UPH & OPS -->
+            <tr class="section-header"><td colspan="13">⚡ UPH & Operations</td></tr>
+
+            <tr>
+              <td>Hours Worked</td>
+              <template x-for="(h, i) in hours" :key="'hw-'+i">
+                <td><input type="number" class="data-input" x-model.number="rows.hours[i]" @input="update()" :placeholder="h.profile.toFixed(2)" min="0" step="0.01" /></td>
+              </template>
+              <td class="font-bold text-white" x-text="totalHours.toFixed(2)"></td>
+            </tr>
+
+            <tr>
+              <td>Actual UPH</td>
+              <template x-for="(h, i) in hours" :key="'uph-'+i">
+                <td>
+                  <span class="text-sm font-bold"
+                        :class="rows.hours[i] > 0 ? 'text-yellow-300' : 'text-gray-600'"
+                        x-text="rows.hours[i] > 0 ? Math.round(rows.actualVol[i] / rows.hours[i]).toLocaleString() : '—'">
+                  </span>
+                </td>
+              </template>
+              <td class="font-bold text-yellow-300" x-text="overallUPH"></td>
+            </tr>
+
+            <tr>
+              <td>ASRS Picking UPH</td>
+              <template x-for="(h, i) in hours" :key="'asrs-'+i">
+                <td><input type="number" class="data-input" x-model.number="rows.asrsUPH[i]" @input="update()" placeholder="0" min="0" /></td>
+              </template>
+              <td class="font-bold text-blue-300" x-text="avgASRS || '—'"></td>
+            </tr>
+
+            <tr>
+              <td>Box Finish UPH</td>
+              <template x-for="(h, i) in hours" :key="'box-'+i">
+                <td><input type="number" class="data-input" x-model.number="rows.boxUPH[i]" @input="update()" placeholder="0" min="0" /></td>
+              </template>
+              <td class="font-bold text-green-400" x-text="avgBox || '—'"></td>
+            </tr>
+
+            <tr>
+              <td>OTS Misses</td>
+              <template x-for="(h, i) in hours" :key="'ots-'+i">
+                <td><input type="number" class="data-input" x-model.number="rows.ots[i]" @input="update()" placeholder="0" min="0" /></td>
+              </template>
+              <td class="font-bold" :class="totalOTS > 0 ? 'text-red-400' : 'text-green-400'" x-text="totalOTS"></td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Capacity Table ── -->
+    <div class="glass-card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-sm font-bold text-white">📦 OB Capacity</h3>
+          <p class="text-xs text-gray-400 mt-0.5">28-day Labor Plan volumes — 1P · 3P/WFS · SAMS</p>
+        </div>
+        <div class="text-xs text-gray-500 font-medium">Planned capacity for this shift</div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="cap-table">
+          <thead>
+            <tr>
+              <th class="min-w-[100px]">Type</th>
+              <th>Planned</th>
+              <th>Consumed</th>
+              <th>Additions</th>
+              <th>Available</th>
+              <th>Cut Time (1)</th>
+              <th>OTS Miss (1)</th>
+              <th>Cut Time (2)</th>
+              <th>OTS Miss (2)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(cap, i) in capacity" :key="i">
+              <tr>
+                <td>
+                  <span class="inline-flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="'background:' + cap.color"></span>
+                    <span class="font-black text-white" x-text="cap.type"></span>
+                  </span>
+                </td>
+                <td class="text-white font-semibold" x-text="cap.planned.toLocaleString()"></td>
+                <td>
+                  <span class="font-bold" :class="cap.consumed > cap.planned * 0.8 ? 'text-red-400' : 'text-yellow-300'" x-text="cap.consumed.toLocaleString()"></span>
+                </td>
+                <td><input type="number" class="data-input" x-model.number="cap.additions" @input="updateCap(i)" placeholder="0" min="0" /></td>
+                <td>
+                  <span class="font-bold text-green-400" x-text="(cap.planned + cap.additions - cap.consumed).toLocaleString()"></span>
+                </td>
+                <td><input type="text" class="data-input" x-model="cap.cut1" placeholder="e.g. 3PM" style="width:80px;" /></td>
+                <td><input type="number" class="data-input" x-model.number="cap.ots1" placeholder="0" min="0" /></td>
+                <td><input type="text" class="data-input" x-model="cap.cut2" placeholder="e.g. 5PM" style="width:80px;" /></td>
+                <td><input type="number" class="data-input" x-model.number="cap.ots2" placeholder="0" min="0" /></td>
+              </tr>
+            </template>
+            <!-- Totals row -->
+            <tr style="background:rgba(255,255,255,0.04); border-top:1px solid rgba(255,255,255,0.1)">
+              <td class="font-black text-gray-300">TOTAL</td>
+              <td class="font-black text-white" x-text="capacity.reduce((s,c) => s+c.planned, 0).toLocaleString()"></td>
+              <td class="font-black text-yellow-300" x-text="capacity.reduce((s,c) => s+c.consumed, 0).toLocaleString()"></td>
+              <td class="font-black text-blue-300" x-text="capacity.reduce((s,c) => s+c.additions, 0).toLocaleString()"></td>
+              <td class="font-black text-green-400" x-text="capacity.reduce((s,c) => s+c.planned+c.additions-c.consumed, 0).toLocaleString()"></td>
+              <td colspan="4" class="text-gray-500 text-xs">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Capacity visual bars -->
+      <div class="grid grid-cols-3 gap-4 mt-5">
+        <template x-for="(cap, i) in capacity" :key="'bar-'+i">
+          <div class="glass-card p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-bold text-white" x-text="cap.type"></span>
+              <span class="text-xs font-semibold" :class="capPct(cap) > 80 ? 'text-red-400' : 'text-gray-400'" x-text="capPct(cap) + '% used'"></span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" :style="'width:' + capPct(cap) + '%;background:' + cap.color"></div>
+            </div>
+            <div class="flex justify-between text-xs mt-1.5 text-gray-500">
+              <span x-text="cap.consumed.toLocaleString() + ' consumed'"></span>
+              <span x-text="cap.planned.toLocaleString() + ' planned'"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── LP Config strip ── -->
+    <div class="glass-card p-5">
+      <h3 class="text-sm font-bold text-white mb-4">⚙️ Shift Configuration</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="text-center">
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">28-day LP Volume</div>
+          <input type="number" class="data-input" x-model.number="lpVolume" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+        </div>
+        <div class="text-center">
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">28-day LP UPH</div>
+          <input type="number" class="data-input" x-model.number="lpUPH" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+        </div>
+        <div class="text-center">
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">Backlog (units)</div>
+          <input type="number" class="data-input" x-model.number="backlog" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+        </div>
+        <div class="text-center">
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">Headcount</div>
+          <input type="number" class="data-input" x-model.number="headcount" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Notes ── -->
+    <div class="glass-card p-5">
+      <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+      <textarea class="notes-area" x-model="notes" placeholder="Enter shift notes, escalations, action items..."></textarea>
+      <div class="flex justify-end mt-2">
+        <span class="text-xs text-gray-600" x-text="notes.length + ' characters'"></span>
+      </div>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="text-center py-4 text-xs text-gray-600">
+      PHL5 OB Shift Dashboard · Next Gen Peak 2026 · Built with ❤️ by Code Puppy 🐶
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- JAVASCRIPT — Alpine.js Dashboard Component                 -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <script>
+    function dashboard() {
+      return {
+
+        // ── Hour definitions ──────────────────────────────────
+        hours: [
+          { num: 1,  start: '7:30 AM',  profile: 0.25, profileLabel: '½ Start',   profileClass: 'hour-badge profile-start' },
+          { num: 2,  start: '8:00 AM',  profile: 1.00, profileLabel: 'Full',       profileClass: 'hour-badge profile-full'  },
+          { num: 3,  start: '9:00 AM',  profile: 1.00, profileLabel: 'Full',       profileClass: 'hour-badge profile-full'  },
+          { num: 4,  start: '10:00 AM', profile: 0.50, profileLabel: 'Meal',       profileClass: 'hour-badge profile-meal'  },
+          { num: 5,  start: '11:00 AM', profile: 0.75, profileLabel: '¾ Hr',       profileClass: 'hour-badge profile-break' },
+          { num: 6,  start: '12:00 PM', profile: 1.00, profileLabel: 'Full',       profileClass: 'hour-badge profile-full'  },
+          { num: 7,  start: '1:00 PM',  profile: 1.00, profileLabel: 'Full',       profileClass: 'hour-badge profile-full'  },
+          { num: 8,  start: '2:00 PM',  profile: 0.33, profileLabel: 'Break',      profileClass: 'hour-badge profile-break' },
+          { num: 9,  start: '3:00 PM',  profile: 1.00, profileLabel: 'Full',       profileClass: 'hour-badge profile-full'  },
+          { num: 10, start: '4:00 PM',  profile: 1.00, profileLabel: 'Full',       profileClass: 'hour-badge profile-full'  },
+          { num: 11, start: '5:00 PM',  profile: 1.00, profileLabel: 'Finish',     profileClass: 'hour-badge profile-start' },
+        ],
+
+        // ── Row data (11 slots each) ──────────────────────────
+        rows: {
+          goalVol:   Array(11).fill(0),
+          actualVol: Array(11).fill(0),
+          goalBag:   Array(11).fill(0),
+          actualBag: Array(11).fill(0),
+          hours:     Array(11).fill(0),
+          asrsUPH:   Array(11).fill(0),
+          boxUPH:    Array(11).fill(0),
+          ots:       Array(11).fill(0),
+        },
+
+        // ── Capacity ──────────────────────────────────────────
+        capacity: [
+          { type: '1P',     planned: 150000, consumed: 41962, additions: 0, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#0053e2' },
+          { type: '3P/WFS', planned:  75000, consumed: 23064, additions: 0, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#ffc220' },
+          { type: 'SAMS',   planned:  75000, consumed: 23064, additions: 0, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#2a8703' },
+        ],
+
+        // ── Config ────────────────────────────────────────────
+        lpVolume: 0,
+        lpUPH:    0,
+        backlog:  0,
+        headcount: 0,
+        notes: '',
+
+        // ── UI state ─────────────────────────────────────────
+        clock: '',
+        dateStr: '',
+        currentHourLabel: '—',
+        shiftProgress: 0,
+        shiftPctColor: 'text-blue-300',
+
+        // ── Computed (updated by update()) ────────────────────
+        totalGoalVol:   0,
+        totalActualVol: 0,
+        totalGoalBag:   0,
+        totalActualBag: 0,
+        totalHours:     0,
+        totalOTS:       0,
+        overallUPH:     0,
+        avgASRS:        0,
+        avgBox:         0,
+        cummVol:        Array(11).fill(0),
+        cummBag:        Array(11).fill(0),
+        uphStatus:      { cls: 'text-gray-400', label: '—' },
+
+        // ── Charts ───────────────────────────────────────────
+        volumeChart: null,
+        uphChart:    null,
+
+        // ── Init ─────────────────────────────────────────────
+        init() {
+          this.updateClock();
+          setInterval(() => this.updateClock(), 1000);
+          this.update();
+          this.$nextTick(() => this.initCharts());
+        },
+
+        // ── Clock ─────────────────────────────────────────────
+        updateClock() {
+          const now = new Date();
+          this.clock = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          this.dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+          // Shift: 7:30 AM – 5:30 PM
+          const start = new Date(now); start.setHours(7,  30, 0, 0);
+          const end   = new Date(now); end.setHours(17, 30, 0, 0);
+          const elapsed = Math.max(0, now - start);
+          const total   = end - start;
+          this.shiftProgress = Math.min(100, Math.round(elapsed / total * 100));
+          this.shiftPctColor = this.shiftProgress < 50 ? 'text-blue-300' : this.shiftProgress < 80 ? 'text-yellow-300' : 'text-red-300';
+
+          // Current hour label
+          const hourStarts = [
+            [7,30],[8,0],[9,0],[10,0],[11,0],[12,0],[13,0],[14,0],[15,0],[16,0],[17,0]
+          ];
+          const labels = this.hours.map(h => h.start);
+          let cur = '—';
+          for (let i = hourStarts.length - 1; i >= 0; i--) {
+            const hs = new Date(now); hs.setHours(hourStarts[i][0], hourStarts[i][1], 0, 0);
+            if (now >= hs) { cur = 'Hour ' + (i+1) + ' · ' + labels[i]; break; }
+          }
+          this.currentHourLabel = cur;
+        },
+
+        // ── Recalculate all derived values ────────────────────
+        update() {
+          const r = this.rows;
+
+          this.totalGoalVol   = r.goalVol.reduce((a,b)   => a + (b||0), 0);
+          this.totalActualVol = r.actualVol.reduce((a,b)  => a + (b||0), 0);
+          this.totalGoalBag   = r.goalBag.reduce((a,b)   => a + (b||0), 0);
+          this.totalActualBag = r.actualBag.reduce((a,b)  => a + (b||0), 0);
+          this.totalHours     = r.hours.reduce((a,b)     => a + (b||0), 0);
+          this.totalOTS       = r.ots.reduce((a,b)       => a + (b||0), 0);
+
+          this.overallUPH = this.totalHours > 0
+            ? Math.round(this.totalActualVol / this.totalHours).toLocaleString()
+            : '—';
+
+          // ASRS & Box averages (non-zero only)
+          const asrsVals = r.asrsUPH.filter(v => v > 0);
+          const boxVals  = r.boxUPH.filter(v => v > 0);
+          this.avgASRS = asrsVals.length ? Math.round(asrsVals.reduce((a,b) => a+b, 0) / asrsVals.length).toLocaleString() : 0;
+          this.avgBox  = boxVals.length  ? Math.round(boxVals.reduce((a,b) => a+b, 0)  / boxVals.length).toLocaleString()  : 0;
+
+          // UPH status vs LP
+          const uphNum = this.totalHours > 0 ? Math.round(this.totalActualVol / this.totalHours) : 0;
+          if (!uphNum || !this.lpUPH) {
+            this.uphStatus = { cls: 'text-gray-400', label: 'Enter LP UPH target' };
+          } else if (uphNum >= this.lpUPH) {
+            this.uphStatus = { cls: 'text-green-400', label: '✓ Above LP UPH target' };
+          } else {
+            this.uphStatus = { cls: 'text-red-400', label: '✗ Below LP UPH (' + this.lpUPH + ')' };
+          }
+
+          // Cumulative volume delta
+          let cvSum = 0, cbSum = 0;
+          this.cummVol = r.goalVol.map((g, i) => { cvSum += (r.actualVol[i]||0) - (g||0); return cvSum; });
+          this.cummBag = r.goalBag.map((g, i) => { cbSum += (r.actualBag[i]||0) - (g||0); return cbSum; });
+
+          this.refreshCharts();
+        },
+
+        // ── Capacity recalc (re-renders via Alpine reactivity) ─
+        updateCap(i) {
+          this.capacity[i].additions = this.capacity[i].additions || 0;
+        },
+
+        // ── Capacity % used ───────────────────────────────────
+        capPct(cap) {
+          const avail = cap.planned + (cap.additions || 0);
+          return avail > 0 ? Math.min(100, Math.round(cap.consumed / avail * 100)) : 0;
+        },
+
+        // ── Hit/Miss badge class ──────────────────────────────
+        hitMissClass(delta, goal) {
+          if (!goal) return 'badge-na';
+          return delta >= 0 ? 'badge-hit' : 'badge-miss';
+        },
+
+        // ── Charts init ───────────────────────────────────────
+        initCharts() {
+          const chartDefaults = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#1e2640',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                titleColor: '#7ab3ff',
+                bodyColor: '#e8eaf0',
+                padding: 10,
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                ticks: { color: '#6b7280', font: { size: 10 } }
+              },
+              y: {
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                ticks: { color: '#6b7280', font: { size: 10 } }
+              }
+            }
+          };
+
+          const labels = this.hours.map(h => 'H' + h.num + '\n' + h.start);
+
+          this.volumeChart = new Chart(document.getElementById('volumeChart'), {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: 'Goal',   data: [...this.rows.goalVol],   backgroundColor: 'rgba(0,83,226,0.5)',   borderColor: '#0053e2', borderWidth: 1.5, borderRadius: 4 },
+                { label: 'Actual', data: [...this.rows.actualVol], backgroundColor: 'rgba(255,194,32,0.6)', borderColor: '#ffc220', borderWidth: 1.5, borderRadius: 4 },
+              ]
+            },
+            options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: true, labels: { color: '#9ca3af', font: { size: 11 } } } } }
+          });
+
+          this.uphChart = new Chart(document.getElementById('uphChart'), {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                { label: 'Actual UPH',    data: Array(11).fill(null), borderColor: '#ffc220', backgroundColor: 'rgba(255,194,32,0.1)', tension: 0.4, fill: true,  pointRadius: 4, pointBackgroundColor: '#ffc220' },
+                { label: 'ASRS Pick UPH', data: [...this.rows.asrsUPH], borderColor: '#0053e2', backgroundColor: 'transparent', tension: 0.4, fill: false, pointRadius: 4, pointBackgroundColor: '#0053e2' },
+                { label: 'Box Finish UPH',data: [...this.rows.boxUPH],  borderColor: '#2a8703', backgroundColor: 'transparent', tension: 0.4, fill: false, pointRadius: 4, pointBackgroundColor: '#2a8703' },
+              ]
+            },
+            options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: true, labels: { color: '#9ca3af', font: { size: 11 } } } } }
+          });
+        },
+
+        // ── Refresh chart data ────────────────────────────────
+        refreshCharts() {
+          if (!this.volumeChart || !this.uphChart) return;
+
+          this.volumeChart.data.datasets[0].data = [...this.rows.goalVol];
+          this.volumeChart.data.datasets[1].data = [...this.rows.actualVol];
+          this.volumeChart.update('none');
+
+          const actualUPHByHour = this.rows.hours.map((h, i) =>
+            h > 0 ? Math.round((this.rows.actualVol[i] || 0) / h) : null
+          );
+          this.uphChart.data.datasets[0].data = actualUPHByHour;
+          this.uphChart.data.datasets[1].data = [...this.rows.asrsUPH].map(v => v || null);
+          this.uphChart.data.datasets[2].data = [...this.rows.boxUPH].map(v => v || null);
+          this.uphChart.update('none');
+        },
+
+        // ── Clear all data ────────────────────────────────────
+        clearAll() {
+          if (!confirm('Clear all hourly data? This cannot be undone.')) return;
+          const keys = Object.keys(this.rows);
+          keys.forEach(k => { this.rows[k] = Array(11).fill(0); });
+          this.lpVolume = 0; this.lpUPH = 0; this.backlog = 0; this.headcount = 0;
+          this.notes = '';
+          this.capacity.forEach(c => { c.additions = 0; c.cut1 = ''; c.ots1 = 0; c.cut2 = ''; c.ots2 = 0; });
+          this.update();
+        },
+
+        // ── Export CSV ────────────────────────────────────────
+        exportCSV() {
+          const hourLabels = this.hours.map(h => 'Hr' + h.num + ' ' + h.start);
+          const rows = [
+            ['Metric', ...hourLabels, 'Total'],
+            ['Goal Volume',    ...this.rows.goalVol,   this.totalGoalVol],
+            ['Actual Volume',  ...this.rows.actualVol, this.totalActualVol],
+            ['Bagging Goal',   ...this.rows.goalBag,   this.totalGoalBag],
+            ['Actual Packing', ...this.rows.actualBag, this.totalActualBag],
+            ['Hours Worked',   ...this.rows.hours,     this.totalHours],
+            ['ASRS UPH',       ...this.rows.asrsUPH,   this.avgASRS],
+            ['Box Finish UPH', ...this.rows.boxUPH,    this.avgBox],
+            ['OTS Misses',     ...this.rows.ots,       this.totalOTS],
+          ];
+          const csv = rows.map(r => r.join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv' });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href     = url;
+          a.download = 'PHL5_OB_Shift_' + new Date().toISOString().slice(0,10) + '.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+      };
+    }
+  </script>
+</body>
+</html>
