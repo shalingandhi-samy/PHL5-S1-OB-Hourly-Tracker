@@ -605,7 +605,6 @@
               <th class="min-w-[100px]">Type</th>
               <th>Planned</th>
               <th>Consumed</th>
-              <th>Additions</th>
               <th>Available</th>
               <th>Cut Time (1)</th>
               <th>OTS Miss (1)</th>
@@ -626,9 +625,8 @@
                 <td>
                   <span class="font-bold" :class="cap.consumed > cap.planned * 0.8 ? 'text-red-400' : 'text-yellow-300'" x-text="cap.consumed.toLocaleString()"></span>
                 </td>
-                <td><input type="number" class="data-input" x-model.number="cap.additions" @input="updateCap(i)" placeholder="0" min="0" /></td>
                 <td>
-                  <span class="font-bold text-green-400" x-text="(cap.planned + cap.additions - cap.consumed).toLocaleString()"></span>
+                  <span class="font-bold text-green-400" x-text="(cap.planned - cap.consumed).toLocaleString()"></span>
                 </td>
                 <td><input type="text" class="data-input" x-model="cap.cut1" placeholder="e.g. 3PM" style="width:80px;" /></td>
                 <td><input type="number" class="data-input" x-model.number="cap.ots1" placeholder="0" min="0" /></td>
@@ -641,8 +639,7 @@
               <td class="font-black text-gray-300">TOTAL</td>
               <td class="font-black text-white" x-text="capacity.reduce((s,c) => s+c.planned, 0).toLocaleString()"></td>
               <td class="font-black text-yellow-300" x-text="capacity.reduce((s,c) => s+c.consumed, 0).toLocaleString()"></td>
-              <td class="font-black text-blue-300" x-text="capacity.reduce((s,c) => s+c.additions, 0).toLocaleString()"></td>
-              <td class="font-black text-green-400" x-text="capacity.reduce((s,c) => s+c.planned+c.additions-c.consumed, 0).toLocaleString()"></td>
+              <td class="font-black text-green-400" x-text="capacity.reduce((s,c) => s+c.planned-c.consumed, 0).toLocaleString()"></td>
               <td colspan="4" class="text-gray-500 text-xs">—</td>
             </tr>
           </tbody>
@@ -743,9 +740,9 @@
 
         // ── Capacity ──────────────────────────────────────────
         capacity: [
-          { type: '1P',     planned: 150000, consumed: 41962, additions: 0, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#0053e2' },
-          { type: '3P/WFS', planned:  75000, consumed: 23064, additions: 0, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#ffc220' },
-          { type: 'SAMS',   planned:  75000, consumed: 23064, additions: 0, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#2a8703' },
+          { type: '1P',     planned: 150000, consumed: 41962, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#0053e2' },
+          { type: '3P/WFS', planned:  75000, consumed: 23064, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#ffc220' },
+          { type: 'SAMS',   planned:  75000, consumed: 23064, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#2a8703' },
         ],
 
         // ── Config ────────────────────────────────────────────
@@ -848,15 +845,9 @@
 
         },
 
-        // ── Capacity recalc (re-renders via Alpine reactivity) ─
-        updateCap(i) {
-          this.capacity[i].additions = this.capacity[i].additions || 0;
-        },
-
         // ── Capacity % used ───────────────────────────────────
         capPct(cap) {
-          const avail = cap.planned + (cap.additions || 0);
-          return avail > 0 ? Math.min(100, Math.round(cap.consumed / avail * 100)) : 0;
+          return cap.planned > 0 ? Math.min(100, Math.round(cap.consumed / cap.planned * 100)) : 0;
         },
 
         // ── Hit/Miss badge class ──────────────────────────────
@@ -872,7 +863,7 @@
           keys.forEach(k => { this.rows[k] = Array(11).fill(0); });
           this.lpVolume = 0; this.lpUPH = 0; this.backlog = 0; this.headcount = 0;
           this.notes = '';
-          this.capacity.forEach(c => { c.additions = 0; c.cut1 = ''; c.ots1 = 0; c.cut2 = ''; c.ots2 = 0; });
+          this.capacity.forEach(c => { c.cut1 = ''; c.ots1 = 0; c.cut2 = ''; c.ots2 = 0; });
           this.update();
         },
 
