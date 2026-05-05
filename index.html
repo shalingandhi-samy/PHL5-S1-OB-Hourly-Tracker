@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PHL5 — OB Shift Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
@@ -227,9 +226,6 @@
     ::-webkit-scrollbar-thumb { background: rgba(0,83,226,0.4); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(0,83,226,0.7); }
 
-    /* ── Chart wrapper ── */
-    .chart-wrap { position: relative; height: 220px; }
-
     /* ── Tag ── */
     .site-tag {
       background: linear-gradient(135deg, var(--blue-100), #003db3);
@@ -393,45 +389,6 @@
         </div>
         <div class="text-xs mt-3 font-semibold" :class="totalOTS === 0 ? 'text-green-400' : 'text-red-400'" x-text="totalOTS === 0 ? '✓ Zero misses — Great job!' : '⚠ Review cut times'"></div>
         <div class="text-xs text-gray-500 mt-1">Productive hrs: <span class="text-gray-300">8.83</span></div>
-      </div>
-    </div>
-
-    <!-- ── Charts Row ── -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-      <!-- Volume by Hour -->
-      <div class="glass-card p-5">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-sm font-bold text-white">Volume by Hour</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Goal vs Actual — all 11 time slots</p>
-          </div>
-          <div class="flex items-center gap-3 text-xs">
-            <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-sm" style="background:#0053e2"></div><span class="text-gray-400">Goal</span></div>
-            <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-sm" style="background:#ffc220"></div><span class="text-gray-400">Actual</span></div>
-          </div>
-        </div>
-        <div class="chart-wrap">
-          <canvas id="volumeChart"></canvas>
-        </div>
-      </div>
-
-      <!-- UPH Trend -->
-      <div class="glass-card p-5">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="text-sm font-bold text-white">UPH Trend</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Actual · ASRS Picking · Box Finish</p>
-          </div>
-          <div class="flex items-center gap-3 text-xs">
-            <div class="flex items-center gap-1.5"><div class="w-3 h-1 rounded-sm" style="background:#ffc220"></div><span class="text-gray-400">Actual</span></div>
-            <div class="flex items-center gap-1.5"><div class="w-3 h-1 rounded-sm" style="background:#0053e2"></div><span class="text-gray-400">ASRS</span></div>
-            <div class="flex items-center gap-1.5"><div class="w-3 h-1 rounded-sm" style="background:#2a8703"></div><span class="text-gray-400">Box</span></div>
-          </div>
-        </div>
-        <div class="chart-wrap">
-          <canvas id="uphChart"></canvas>
-        </div>
       </div>
     </div>
 
@@ -819,16 +776,11 @@
         cummBag:        Array(11).fill(0),
         uphStatus:      { cls: 'text-gray-400', label: '—' },
 
-        // ── Charts ───────────────────────────────────────────
-        volumeChart: null,
-        uphChart:    null,
-
         // ── Init ─────────────────────────────────────────────
         init() {
           this.updateClock();
           setInterval(() => this.updateClock(), 1000);
           this.update();
-          this.$nextTick(() => this.initCharts());
         },
 
         // ── Clock ─────────────────────────────────────────────
@@ -894,7 +846,6 @@
           this.cummVol = r.goalVol.map((g, i) => { cvSum += (r.actualVol[i]||0) - (g||0); return cvSum; });
           this.cummBag = r.goalBag.map((g, i) => { cbSum += (r.actualBag[i]||0) - (g||0); return cbSum; });
 
-          this.refreshCharts();
         },
 
         // ── Capacity recalc (re-renders via Alpine reactivity) ─
@@ -912,79 +863,6 @@
         hitMissClass(delta, goal) {
           if (!goal) return 'badge-na';
           return delta >= 0 ? 'badge-hit' : 'badge-miss';
-        },
-
-        // ── Charts init ───────────────────────────────────────
-        initCharts() {
-          const chartDefaults = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: '#1e2640',
-                borderColor: 'rgba(255,255,255,0.1)',
-                borderWidth: 1,
-                titleColor: '#7ab3ff',
-                bodyColor: '#e8eaf0',
-                padding: 10,
-              }
-            },
-            scales: {
-              x: {
-                grid: { color: 'rgba(255,255,255,0.04)' },
-                ticks: { color: '#6b7280', font: { size: 10 } }
-              },
-              y: {
-                grid: { color: 'rgba(255,255,255,0.04)' },
-                ticks: { color: '#6b7280', font: { size: 10 } }
-              }
-            }
-          };
-
-          const labels = this.hours.map(h => 'H' + h.num + '\n' + h.start);
-
-          this.volumeChart = new Chart(document.getElementById('volumeChart'), {
-            type: 'bar',
-            data: {
-              labels,
-              datasets: [
-                { label: 'Goal',   data: [...this.rows.goalVol],   backgroundColor: 'rgba(0,83,226,0.5)',   borderColor: '#0053e2', borderWidth: 1.5, borderRadius: 4 },
-                { label: 'Actual', data: [...this.rows.actualVol], backgroundColor: 'rgba(255,194,32,0.6)', borderColor: '#ffc220', borderWidth: 1.5, borderRadius: 4 },
-              ]
-            },
-            options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: true, labels: { color: '#9ca3af', font: { size: 11 } } } } }
-          });
-
-          this.uphChart = new Chart(document.getElementById('uphChart'), {
-            type: 'line',
-            data: {
-              labels,
-              datasets: [
-                { label: 'Actual UPH',    data: Array(11).fill(null), borderColor: '#ffc220', backgroundColor: 'rgba(255,194,32,0.1)', tension: 0.4, fill: true,  pointRadius: 4, pointBackgroundColor: '#ffc220' },
-                { label: 'ASRS Pick UPH', data: [...this.rows.asrsUPH], borderColor: '#0053e2', backgroundColor: 'transparent', tension: 0.4, fill: false, pointRadius: 4, pointBackgroundColor: '#0053e2' },
-                { label: 'Box Finish UPH',data: [...this.rows.boxUPH],  borderColor: '#2a8703', backgroundColor: 'transparent', tension: 0.4, fill: false, pointRadius: 4, pointBackgroundColor: '#2a8703' },
-              ]
-            },
-            options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: true, labels: { color: '#9ca3af', font: { size: 11 } } } } }
-          });
-        },
-
-        // ── Refresh chart data ────────────────────────────────
-        refreshCharts() {
-          if (!this.volumeChart || !this.uphChart) return;
-
-          this.volumeChart.data.datasets[0].data = [...this.rows.goalVol];
-          this.volumeChart.data.datasets[1].data = [...this.rows.actualVol];
-          this.volumeChart.update('none');
-
-          const actualUPHByHour = this.rows.hours.map((h, i) =>
-            h > 0 ? Math.round((this.rows.actualVol[i] || 0) / h) : null
-          );
-          this.uphChart.data.datasets[0].data = actualUPHByHour;
-          this.uphChart.data.datasets[1].data = [...this.rows.asrsUPH].map(v => v || null);
-          this.uphChart.data.datasets[2].data = [...this.rows.boxUPH].map(v => v || null);
-          this.uphChart.update('none');
         },
 
         // ── Clear all data ────────────────────────────────────
