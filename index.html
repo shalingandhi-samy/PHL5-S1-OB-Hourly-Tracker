@@ -646,24 +646,6 @@
         </table>
       </div>
 
-      <!-- Capacity visual bars -->
-      <div class="grid grid-cols-3 gap-4 mt-5">
-        <template x-for="(cap, i) in capacity" :key="'bar-'+i">
-          <div class="glass-card p-4">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-sm font-bold text-white" x-text="cap.type"></span>
-              <span class="text-xs font-semibold" :class="capPct(cap) > 80 ? 'text-red-400' : 'text-gray-400'" x-text="capPct(cap) + '% used'"></span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" :style="'width:' + capPct(cap) + '%;background:' + cap.color"></div>
-            </div>
-            <div class="flex justify-between text-xs mt-1.5 text-gray-500">
-              <span x-text="cap.consumed.toLocaleString() + ' consumed'"></span>
-              <span x-text="cap.planned.toLocaleString() + ' planned'"></span>
-            </div>
-          </div>
-        </template>
-      </div>
     </div>
 
     <!-- ── LP Config strip ── -->
@@ -843,11 +825,6 @@
           this.cummVol = r.goalVol.map((g, i) => { cvSum += (r.actualVol[i]||0) - (g||0); return cvSum; });
           this.cummBag = r.goalBag.map((g, i) => { cbSum += (r.actualBag[i]||0) - (g||0); return cbSum; });
 
-        },
-
-        // ── Capacity % used ───────────────────────────────────
-        capPct(cap) {
-          return cap.planned > 0 ? Math.min(100, Math.round(cap.consumed / cap.planned * 100)) : 0;
         },
 
         // ── Hit/Miss badge class ──────────────────────────────
