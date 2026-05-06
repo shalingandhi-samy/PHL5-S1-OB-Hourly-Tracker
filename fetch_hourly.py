@@ -17,6 +17,7 @@ Patches data.js with:
   • actualBag                                                ← DRAX Bagging - Manual
   • boxUPH                                                   ← DRAX Box Finishing
   • capacity (1P / 3P/WFS / SAMS)                           ← Gscope Distributor Capacity
+  • otsData (20-slot miss counts per cut time)               ← Endgame /cutoffs
 
 Auth:
   • Endgame  — MSAL device-code (cached in .token_cache_endgame.json)
@@ -79,7 +80,17 @@ EG_ENDPOINTS = [
     f"https://status-api.endgame-status.prod.k8s.walmart.net/v1/api/pt-status/fc-id/{FC_ID}",
 ]
 
-FCAP_BASE = "https://gscope.walmart.com/api/gateway/fcap"
+EG_STATUS_API = "https://status-api.endgame-status.prod.k8s.walmart.net"
+FCAP_BASE     = "https://gscope.walmart.com/api/gateway/fcap"
+
+# Cut times hardcoded in index.html — order MUST match the 20-slot otsData array.
+# Empty string at index 19 = spare slot (no cut time assigned).
+CUT_TIMES = [
+    "10:31 AM", "10:38 AM", "12:31 PM",  "1:00 PM",  "1:18 PM",
+     "1:38 PM",  "1:58 PM",  "2:00 PM",  "2:01 PM",  "2:02 PM",
+     "4:08 PM",  "4:30 PM",  "4:31 PM",  "4:32 PM",  "4:48 PM",
+     "4:58 PM",  "5:30 PM",  "5:38 PM",  "5:58 PM",  "",
+]
 
 # Shift: 7:30 AM–6:00 PM → 11 hourly slots.
 # Wall-clock hour (0-23) for each slot — matches DRAX column index within a day.
@@ -169,6 +180,63 @@ def fetch_endgame() -> dict:
     except Exception as e:
         log.error("Endgame fetch failed: %s", e)
     return defaults
+
+
+def fetch_ots(token: str) -> list[int]:
+    """Fetch OTS miss counts per cut time from Endgame /cutoffs.
+
+    Returns a 20-element int array aligned to CUT_TIMES.
+    Each value = total pick tickets that missed that cut time.
+    Falls back to all-zeros on any failure.
+    """
+    zeros = [0] * len(CUT_TIMES)
+    url   = f"{EG_STATUS_API}/{FC_ID}/cutoffs"
+    try:
+        r = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            params={"date": date.today().isoformat()},
+            timeout=15,
+            verify=False,
+        )
+        if r.status_code != 200:
+            log.warning("Endgame /cutoffs returned HTTP %s", r.status_code)
+            return zeros
+
+        # Build {normalised_time_str: miss_count} from response
+        miss_by_time: dict[str, int] = {}
+        for _group, group in r.json().get("cutOffGroups", {}).items():
+            for time_str, statuses in group.get("cutOffTimes", {}).items():
+                miss = 0
+                for _status, bucket in statuses.items():
+                    if isinstance(bucket, dict):
+                        cnt = bucket.get("count", {})
+                        if isinstance(cnt, dict):
+                            miss += int(cnt.get("pickTickets", 0) or 0)
+                # Normalise: parse then reformat to strip leading zeros / spacing quirks
+                key = _normalise_time(time_str)
+                miss_by_time[key] = miss_by_time.get(key, 0) + miss
+
+        # Map to ordered 20-slot array
+        result = [miss_by_time.get(_normalise_time(ct), 0) for ct in CUT_TIMES]
+        log.info("OTS: %d cut times fetched, total miss=%d", len(miss_by_time), sum(result))
+        return result
+
+    except Exception as e:
+        log.error("Endgame /cutoffs fetch failed: %s", e)
+        return zeros
+
+
+def _normalise_time(t: str) -> str:
+    """Parse a time string and reformat as '12:34 PM' for reliable comparison."""
+    if not t.strip():
+        return ""
+    for fmt in ("%I:%M %p", "%H:%M", "%I:%M%p"):
+        try:
+            return datetime.strptime(t.strip(), fmt).strftime("%I:%M %p").lstrip("0")
+        except ValueError:
+            continue
+    return t.strip()  # fallback — keep as-is
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -426,13 +494,24 @@ def main() -> None:
     print(f"\n🚀 PHL5 Hourly Fetch — {datetime.now().strftime('%H:%M:%S  %a %b %d %Y')}\n")
     updates: dict = {}
 
-    # ── 1. Endgame — Backlog ────────────────────────────────────────────────
-    print("📡 Endgame backlog...")
+    # ── 1. Endgame — Backlog + OTS ─────────────────────────────────────────
+    print("📡 Endgame backlog + OTS...")
     eg = fetch_endgame()
     updates.update(eg)
     print(f"   ✅ Backlog={eg['backlog']:,}  "
           f"(NS={eg['blNotShipped']:,}  L={eg['blLoaded']:,}  "
           f"D={eg['blDiverted']:,}  SLA={eg['blShipLabel']:,})")
+
+    # OTS reuses the already-cached Endgame token — no second login
+    try:
+        eg_token = _endgame_token()
+        ots = fetch_ots(eg_token)
+        updates["otsData"] = ots
+        total_miss = sum(ots)
+        print(f"   {'✅' if total_miss >= 0 else '⚠️ '} OTS total miss={total_miss:,}  "
+              f"across {sum(1 for v in ots if v > 0)} cut times")
+    except Exception as e:
+        log.error("OTS fetch failed: %s", e)
 
     # ── 2. DRAX — Hourly Volume / UPH / Bagging / Hours ────────────────────
     print("📡 DRAX hourly metrics...")
@@ -454,6 +533,7 @@ def main() -> None:
         print("   ⚠️  Gscope skipped — set GSCOPE_COOKIE or GSCOPE_TOKEN in .env")
 
     # ── 4. Write ─────────────────────────────────────────────────────────────
+
     patch_data_js(**updates)
     print(f"\n✅ Done — {updates.get('lastUpdated', '?')}\n")
 
