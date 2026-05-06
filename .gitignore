@@ -13,4 +13,6 @@ __pycache__/
 # OS
 Thumbs.db
 .DS_Store
-reset_data.log  
+reset_data.log
+screenshot_teams.log
+.token_cache_teams.json  
