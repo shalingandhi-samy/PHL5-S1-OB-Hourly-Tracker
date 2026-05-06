@@ -307,8 +307,9 @@
           <div class="flex items-center gap-3">
             <h1 class="text-xl font-black text-white tracking-tight">OB Shift Dashboard</h1>
             <span class="site-tag">PHL5</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg" :class="isShiftDay ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'" x-text="isShiftDay ? 'S1 · ACTIVE' : 'S1 · OFF DAY'"></span>
           </div>
-          <p class="text-xs text-blue-300 font-medium mt-0.5">Next Gen Peak 2026 · Outbound Operations</p>
+          <p class="text-xs text-blue-300 font-medium mt-0.5">S1 Shift · Mon – Thu · Outbound Operations · PHL5</p>
         </div>
       </div>
 
@@ -331,7 +332,7 @@
         <div class="text-2xl font-black text-white tabular-nums" x-text="clock"></div>
         <div class="text-xs text-blue-300 font-medium" x-text="dateStr"></div>
         <div class="text-xs text-gray-500 mt-0.5">
-          Shift: <span class="text-white font-semibold">7:30 AM – 5:30 PM</span>
+          Shift: <span class="text-white font-semibold">7:30 AM – 6:00 PM</span> &nbsp;<span class="text-gray-600">Mon–Thu</span>
         </div>
       </div>
     </div>
@@ -343,7 +344,7 @@
         <div class="progress-track flex-1">
           <div class="progress-fill" :style="'width:' + shiftProgress + '%'"></div>
         </div>
-        <span class="text-xs text-gray-500 w-14 flex-shrink-0">5:30 PM</span>
+        <span class="text-xs text-gray-500 w-14 flex-shrink-0">6:00 PM</span>
       </div>
     </div>
   </header>
@@ -388,7 +389,7 @@
           <div class="text-sm text-gray-400 mb-1">total</div>
         </div>
         <div class="text-xs mt-3 font-semibold" :class="totalOTS === 0 ? 'text-green-400' : 'text-red-400'" x-text="totalOTS === 0 ? '✓ Zero misses — Great job!' : '⚠ Review cut times'"></div>
-        <div class="text-xs text-gray-500 mt-1">Productive hrs: <span class="text-gray-300">8.83</span></div>
+        <div class="text-xs text-gray-500 mt-1">Shift: <span class="text-gray-300">Mon – Thu</span></div>
       </div>
     </div>
 
@@ -797,6 +798,7 @@
         dateStr: '',
         currentHourLabel: '—',
         shiftProgress: 0,
+        isShiftDay: false,
         shiftPctColor: 'text-blue-300',
 
         // ── Computed (updated by update()) ────────────────────
@@ -827,9 +829,11 @@
           this.clock = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           this.dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
-          // Shift: 7:30 AM – 5:30 PM
+          // Shift: S1 · 7:30 AM – 6:00 PM · Mon–Thu
+          const day = now.getDay(); // 0=Sun,1=Mon,...,6=Sat
+          this.isShiftDay = day >= 1 && day <= 4;
           const start = new Date(now); start.setHours(7,  30, 0, 0);
-          const end   = new Date(now); end.setHours(17, 30, 0, 0);
+          const end   = new Date(now); end.setHours(18,  0, 0, 0);
           const elapsed = Math.max(0, now - start);
           const total   = end - start;
           this.shiftProgress = Math.min(100, Math.round(elapsed / total * 100));
