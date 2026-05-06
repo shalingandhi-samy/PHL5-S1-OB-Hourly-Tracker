@@ -9,7 +9,7 @@
 # ]
 # ///
 """
-PHL5 OB Hourly Fetch — runs at :15 of each hour, Mon–Thu, 8:15 AM–5:15 PM.
+PHL5 OB Hourly Fetch — runs at :15 of each hour, Mon–Thu, 8:15 AM–6:15 PM.
 
 Patches data.js with:
   • Backlog, blNotShipped, blLoaded, blDiverted, blShipLabel  ← Endgame FC 3124
