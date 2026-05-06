@@ -282,6 +282,22 @@
     }
     .notes-area:focus { border-color: var(--blue-100); box-shadow: 0 0 0 3px rgba(0,83,226,0.2); }
     .notes-area::placeholder { color: rgba(255,255,255,0.2); }
+    /* ── KPI manual input ── */
+    .kpi-input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 5px 10px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .kpi-input:focus { border-color: #ea1100; box-shadow: 0 0 0 3px rgba(234,17,0,0.2); }
+    .kpi-input::placeholder { color: rgba(255,255,255,0.25); font-weight: 400; }
+    .kpi-input::-webkit-inner-spin-button { opacity: 0.4; }
     /* ── Plan KPI (muted / warning top border) ── */
     .kpi-plan::after    { background: rgba(255,255,255,0.18); }
     .kpi-warning::after { background: var(--spark-100); }
@@ -418,8 +434,14 @@
           <div class="text-3xl font-black" :class="backlog > 0 ? 'text-red-400' : 'text-white'" x-text="backlog > 0 ? backlog.toLocaleString() : '—'"></div>
           <div class="text-sm text-gray-400 mb-1" x-show="backlog > 0">units</div>
         </div>
-        <div class="text-xs mt-3 font-semibold" :class="backlog > 0 ? 'text-red-400' : 'text-gray-600'" x-text="backlog > 0 ? '⚠ Backlog active' : 'No backlog'"></div>
-        <div class="text-xs text-gray-600 mt-0.5" x-show="lpDataTs" x-text="'Updated ' + lpDataTs"></div>
+        <div class="flex items-center gap-2 mt-3">
+          <input type="number" min="0"
+                 class="kpi-input"
+                 placeholder="Enter backlog..."
+                 x-model.number="backlog"
+                 @input="update()" />
+        </div>
+        <div class="text-xs mt-1.5 font-semibold" :class="backlog > 0 ? 'text-red-400' : 'text-gray-600'" x-text="backlog > 0 ? '⚠ Backlog active' : 'No backlog'"></div>
       </div>
     </div>
 
