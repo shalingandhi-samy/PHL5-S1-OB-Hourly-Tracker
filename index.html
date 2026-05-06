@@ -877,6 +877,9 @@
           if (src.lpUPH)     this.lpUPH     = src.lpUPH;
           if (src.backlog)   this.backlog   = src.backlog;
           if (src.cell)      this.lpDataCell = src.cell;
+          // Actual volume per hour from DRAX (11-element array)
+          if (Array.isArray(src.actualVol) && src.actualVol.length === 11)
+            this.rows.actualVol = src.actualVol.map(v => Number(v) || 0);
           if (src.lastUpdated) {
             const d = new Date(src.lastUpdated);
             this.lpDataTs = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
