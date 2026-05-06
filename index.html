@@ -419,6 +419,7 @@
           <div class="text-sm text-gray-400 mb-1" x-show="backlog > 0">units</div>
         </div>
         <div class="text-xs mt-3 font-semibold" :class="backlog > 0 ? 'text-red-400' : 'text-gray-600'" x-text="backlog > 0 ? '⚠ Backlog active' : 'No backlog'"></div>
+        <div class="text-xs text-gray-600 mt-0.5" x-show="lpDataTs" x-text="'Updated ' + lpDataTs"></div>
       </div>
     </div>
 
