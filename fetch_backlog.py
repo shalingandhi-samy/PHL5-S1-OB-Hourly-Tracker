@@ -10,9 +10,13 @@ Formula: Backlog = Not Shipped − Loaded − Diverted − Ship Label Applied
 Source: Endgame FC 3124 — https://endgame.prod.mase.glb.us.walmart.net/3124/pt-status
 """
 
-import json, msal, requests, urllib3
+import json, msal, requests, sys, urllib3
 from datetime import date, datetime
 from pathlib import Path
+
+# Force UTF-8 output on Windows so print() never crashes
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -52,7 +56,7 @@ def get_token() -> str:
         # First-time / expired — device code flow
         flow = app.initiate_device_flow(scopes=EG_SCOPES)
         print("\n" + "="*60)
-        print("🔐 One-time login required:")
+        print("[AUTH] One-time login required:")
         print(f"   Open: {flow['verification_uri']}")
         print(f"   Code: {flow['user_code']}")
         print("="*60 + "\n")
@@ -123,16 +127,16 @@ def patch_data_js(backlog: int):
         f"window.PHL5_DATA = {json.dumps(current, indent=2)};\n",
         encoding="utf-8",
     )
-    print(f"✅ Backlog={backlog:,} written → {DATA_JS.name}")
+    print(f"[OK] Backlog={backlog:,} written -> {DATA_JS.name}")
 
 
 def main():
     today = date.today()
     if today.weekday() > 3:
-        print("Not a shift day — skipping.")
+        print("Not a shift day - skipping.")
         return
 
-    print(f"🔄 Backlog fetch — {datetime.now().strftime('%H:%M:%S')}")
+    print(f"[RUN] Backlog fetch - {datetime.now().strftime('%H:%M:%S')}")
     token   = get_token()
     backlog = fetch_backlog(token)
     patch_data_js(backlog)
