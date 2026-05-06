@@ -391,8 +391,8 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
       <!-- 28 Day LP Volume -->
-      <div class="kpi-card kpi-plan">
-        <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">28-Day LP Volume</div>
+      <div class="kpi-card kpi-blue">
+        <div class="text-xs text-blue-400 font-semibold uppercase tracking-wider mb-1">28-Day LP Volume</div>
         <div class="flex items-end gap-2">
           <div class="text-3xl font-black text-white" x-text="lpVolume > 0 ? lpVolume.toLocaleString() : '—'"></div>
         </div>
@@ -400,8 +400,8 @@
       </div>
 
       <!-- 28 Day LP UPH -->
-      <div class="kpi-card kpi-plan">
-        <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">28-Day LP UPH</div>
+      <div class="kpi-card kpi-gold">
+        <div class="text-xs text-yellow-400 font-semibold uppercase tracking-wider mb-1">28-Day LP UPH</div>
         <div class="flex items-end gap-2">
           <div class="text-3xl font-black text-white" x-text="lpUPH > 0 ? lpUPH.toLocaleString() : '—'"></div>
           <div class="text-sm text-gray-400 mb-1" x-show="lpUPH > 0">units/hr</div>
@@ -410,13 +410,13 @@
       </div>
 
       <!-- Total Backlog -->
-      <div class="kpi-card kpi-warning">
-        <div class="text-xs text-yellow-500 font-semibold uppercase tracking-wider mb-1">Total Backlog</div>
+      <div class="kpi-card kpi-red">
+        <div class="text-xs text-red-400 font-semibold uppercase tracking-wider mb-1">Total Backlog</div>
         <div class="flex items-end gap-2">
-          <div class="text-3xl font-black" :class="backlog > 0 ? 'text-yellow-300' : 'text-white'" x-text="backlog > 0 ? backlog.toLocaleString() : '—'"></div>
+          <div class="text-3xl font-black" :class="backlog > 0 ? 'text-red-400' : 'text-white'" x-text="backlog > 0 ? backlog.toLocaleString() : '—'"></div>
           <div class="text-sm text-gray-400 mb-1" x-show="backlog > 0">units</div>
         </div>
-        <div class="text-xs mt-3 font-semibold" :class="backlog > 0 ? 'text-yellow-400' : 'text-gray-600'" x-text="backlog > 0 ? '⚠ Backlog active' : 'No backlog'"></div>
+        <div class="text-xs mt-3 font-semibold" :class="backlog > 0 ? 'text-red-400' : 'text-gray-600'" x-text="backlog > 0 ? '⚠ Backlog active' : 'No backlog'"></div>
       </div>
     </div>
 
