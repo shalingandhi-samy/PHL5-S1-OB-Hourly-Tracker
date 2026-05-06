@@ -397,11 +397,7 @@
         <div class="flex items-end gap-2">
           <div class="text-3xl font-black text-white" x-text="lpVolume > 0 ? lpVolume.toLocaleString() : '—'"></div>
         </div>
-        <div class="text-xs text-gray-500 mt-3">
-          <span x-show="lpDataCell" x-text="'Cell ' + lpDataCell + ' · OB 28DP'"></span>
-          <span x-show="!lpDataCell">Labor Plan target volume</span>
-        </div>
-        <div class="text-xs text-gray-600 mt-0.5" x-show="lpDataTs" x-text="'Updated ' + lpDataTs"></div>
+        <div class="text-xs text-gray-600 mt-3" x-show="lpDataTs" x-text="'Updated ' + lpDataTs"></div>
       </div>
 
       <!-- 28 Day LP UPH -->
