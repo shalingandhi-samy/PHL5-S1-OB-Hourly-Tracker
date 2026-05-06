@@ -456,9 +456,6 @@
         </div>
         <div class="flex items-center gap-3">
           <span class="text-xs text-gray-500">Last synced: <span class="text-gray-300" x-text="lastSync"></span></span>
-          <button @click="syncData()" class="flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 font-semibold px-3 py-1.5 rounded-lg border border-blue-900/40 hover:border-blue-500/40 transition-colors">
-            <span :class="syncing ? 'spin' : ''">↻</span> Refresh
-          </button>
           <button @click="exportCSV()" class="text-xs text-green-300 hover:text-green-200 font-semibold px-3 py-1.5 rounded-lg border border-green-900/40 hover:border-green-500/40 transition-colors">
             ↓ Export CSV
           </button>
