@@ -879,13 +879,22 @@
           this.updateClock();
           setInterval(() => this.updateClock(), 1000);
           this.syncData();
-          setInterval(() => this.syncData(), 5 * 60 * 1000); // auto-refresh every 5 min
+          // Re-sync every 15 min to pick up new data.js written by fetch_backlog.py
+          setInterval(() => this.syncData(), 15 * 60 * 1000);
         },
 
         // ── Sync data from source systems ────────────────────────────────
         async syncData() {
           this.syncing = true;
-          // ── Load data written by fetch_lp_data.py (data.js) ────────────────────────
+          // Dynamically reload data.js (cache-bust so browser fetches the new file)
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'data.js?t=' + Date.now();
+            s.onload = resolve;
+            s.onerror = resolve; // don't block if file missing
+            document.head.appendChild(s);
+          });
+          // Read fresh global written by the newly loaded data.js
           const src = window.PHL5_DATA || {};
           if (src.lpVolume)  this.lpVolume  = src.lpVolume;
           if (src.lpUPH)     this.lpUPH     = src.lpUPH;
