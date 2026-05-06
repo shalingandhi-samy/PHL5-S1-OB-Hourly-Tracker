@@ -606,10 +606,6 @@
               <th>Planned</th>
               <th>Consumed</th>
               <th>Available</th>
-              <th>Cut Time (1)</th>
-              <th>OTS Miss (1)</th>
-              <th>Cut Time (2)</th>
-              <th>OTS Miss (2)</th>
             </tr>
           </thead>
           <tbody>
@@ -628,10 +624,6 @@
                 <td>
                   <span class="font-bold text-green-400" x-text="(cap.planned - cap.consumed).toLocaleString()"></span>
                 </td>
-                <td><input type="text" class="data-input" x-model="cap.cut1" placeholder="e.g. 3PM" style="width:80px;" /></td>
-                <td><input type="number" class="data-input" x-model.number="cap.ots1" placeholder="0" min="0" /></td>
-                <td><input type="text" class="data-input" x-model="cap.cut2" placeholder="e.g. 5PM" style="width:80px;" /></td>
-                <td><input type="number" class="data-input" x-model.number="cap.ots2" placeholder="0" min="0" /></td>
               </tr>
             </template>
             <!-- Totals row -->
@@ -640,12 +632,78 @@
               <td class="font-black text-white" x-text="capacity.reduce((s,c) => s+c.planned, 0).toLocaleString()"></td>
               <td class="font-black text-yellow-300" x-text="capacity.reduce((s,c) => s+c.consumed, 0).toLocaleString()"></td>
               <td class="font-black text-green-400" x-text="capacity.reduce((s,c) => s+c.planned-c.consumed, 0).toLocaleString()"></td>
-              <td colspan="4" class="text-gray-500 text-xs">—</td>
             </tr>
           </tbody>
         </table>
       </div>
 
+    </div>
+
+    <!-- ── Cut Times & OTS Misses ── -->
+    <div class="glass-card p-5">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h3 class="text-sm font-bold text-white">✂️ Cut Times &amp; OTS Misses</h3>
+          <p class="text-xs text-gray-400 mt-0.5">Track all 20 cut times and on-time shipment misses</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-center">
+            <div class="text-xs text-gray-500 uppercase tracking-wider">Total OTS Misses</div>
+            <div class="text-2xl font-black mt-0.5"
+                 :class="cutTimes.reduce((s,c) => s+(c.ots||0), 0) > 0 ? 'text-red-400' : 'text-green-400'"
+                 x-text="cutTimes.reduce((s,c) => s+(c.ots||0), 0)"></div>
+          </div>
+          <div class="text-center">
+            <div class="text-xs text-gray-500 uppercase tracking-wider">Cuts Filled</div>
+            <div class="text-2xl font-black text-blue-300 mt-0.5"
+                 x-text="cutTimes.filter(c => c.time.trim() !== '').length + ' / 20'"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <template x-for="(ct, i) in cutTimes" :key="'ct-'+i">
+          <div class="rounded-xl p-3 border transition-colors"
+               :class="ct.ots > 0
+                 ? 'bg-red-950/30 border-red-800/40'
+                 : ct.time.trim() !== ''
+                   ? 'bg-green-950/20 border-green-800/30'
+                   : 'bg-white/[0.03] border-white/[0.07]'">
+
+            <!-- Cut number badge -->
+            <div class="flex items-center justify-between mb-2.5">
+              <span class="text-xs font-black px-2 py-0.5 rounded-md"
+                    :class="ct.ots > 0 ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/20 text-blue-300'"
+                    x-text="'#' + (i + 1)"></span>
+              <span class="text-xs font-bold"
+                    :class="ct.ots > 0 ? 'text-red-400' : ct.time.trim() !== '' ? 'text-green-400' : 'text-gray-600'"
+                    x-text="ct.ots > 0 ? '✗ MISS' : ct.time.trim() !== '' ? '✓ OK' : '—'"></span>
+            </div>
+
+            <!-- Time input -->
+            <div class="mb-2">
+              <div class="text-xs text-gray-500 mb-1">Cut Time</div>
+              <input type="text"
+                     class="data-input w-full"
+                     style="width:100%; font-size:12px;"
+                     x-model="ct.time"
+                     placeholder="e.g. 2:30 PM" />
+            </div>
+
+            <!-- OTS Miss input -->
+            <div>
+              <div class="text-xs text-gray-500 mb-1">OTS Miss</div>
+              <input type="number"
+                     class="data-input w-full"
+                     style="width:100%; font-size:12px;"
+                     x-model.number="ct.ots"
+                     placeholder="0"
+                     min="0" />
+            </div>
+
+          </div>
+        </template>
+      </div>
     </div>
 
     <!-- ── LP Config strip ── -->
@@ -722,9 +780,9 @@
 
         // ── Capacity ──────────────────────────────────────────
         capacity: [
-          { type: '1P',     planned: 150000, consumed: 41962, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#0053e2' },
-          { type: '3P/WFS', planned:  75000, consumed: 23064, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#ffc220' },
-          { type: 'SAMS',   planned:  75000, consumed: 23064, cut1: '', ots1: 0, cut2: '', ots2: 0, color: '#2a8703' },
+          { type: '1P',     planned: 150000, consumed: 41962, color: '#0053e2' },
+          { type: '3P/WFS', planned:  75000, consumed: 23064, color: '#ffc220' },
+          { type: 'SAMS',   planned:  75000, consumed: 23064, color: '#2a8703' },
         ],
 
         // ── Config ────────────────────────────────────────────
@@ -754,6 +812,7 @@
         cummVol:        Array(11).fill(0),
         cummBag:        Array(11).fill(0),
         uphStatus:      { cls: 'text-gray-400', label: '—' },
+        cutTimes:       Array.from({ length: 20 }, () => ({ time: '', ots: 0 })),
 
         // ── Init ─────────────────────────────────────────────
         init() {
@@ -840,7 +899,7 @@
           keys.forEach(k => { this.rows[k] = Array(11).fill(0); });
           this.lpVolume = 0; this.lpUPH = 0; this.backlog = 0; this.headcount = 0;
           this.notes = '';
-          this.capacity.forEach(c => { c.cut1 = ''; c.ots1 = 0; c.cut2 = ''; c.ots2 = 0; });
+          this.cutTimes = Array.from({ length: 20 }, () => ({ time: '', ots: 0 }));
           this.update();
         },
 
