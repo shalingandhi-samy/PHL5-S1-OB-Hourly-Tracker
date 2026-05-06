@@ -920,6 +920,15 @@
         update() {
           const r = this.rows;
 
+          // ── Goal Volume per hour from LP Volume × hour profile ────
+          // Each hour's goal = lpVolume × (hour_profile / sum_of_all_profiles)
+          // Profile weight accounts for productivity loss (breaks, meal, ½ starts)
+          if (this.lpVolume > 0) {
+            const totalProfile = this.hours.reduce((s, h) => s + h.profile, 0);
+            r.goalVol = this.hours.map(h =>
+              Math.round(this.lpVolume * h.profile / totalProfile)
+            );
+          }
           this.totalGoalVol   = r.goalVol.reduce((a,b)   => a + (b||0), 0);
           this.totalActualVol = r.actualVol.reduce((a,b)  => a + (b||0), 0);
           this.totalGoalBag   = r.goalBag.reduce((a,b)   => a + (b||0), 0);
