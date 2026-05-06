@@ -182,15 +182,20 @@ def fetch_endgame() -> dict:
     return defaults
 
 
-def fetch_ots(token: str) -> list[int]:
-    """Fetch OTS miss counts per cut time from Endgame /cutoffs.
+# Status key variants Endgame uses for "Not Shipped" — checked case-insensitively.
+_NOT_SHIPPED_KEYS = {"NOT_SHIPPED", "NOTSHIPPED", "NOT SHIPPED"}
 
+
+def fetch_ots(token: str, current_ots: list[int]) -> list[int]:
+    """Fetch OTS miss (= NOT SHIPPED count) per cut time from Endgame /cutoffs.
+
+    Only past cut times are updated — future ones carry forward unchanged.
     Returns a 20-element int array aligned to CUT_TIMES.
-    Each value = total pick tickets that missed that cut time.
-    Falls back to all-zeros on any failure.
     """
-    zeros = [0] * len(CUT_TIMES)
-    url   = f"{EG_STATUS_API}/{FC_ID}/cutoffs"
+    result = list(current_ots)          # carry forward existing values
+    now    = datetime.now()
+    url    = f"{EG_STATUS_API}/{FC_ID}/cutoffs"
+
     try:
         r = requests.get(
             url,
@@ -201,30 +206,44 @@ def fetch_ots(token: str) -> list[int]:
         )
         if r.status_code != 200:
             log.warning("Endgame /cutoffs returned HTTP %s", r.status_code)
-            return zeros
+            return result
 
-        # Build {normalised_time_str: miss_count} from response
-        miss_by_time: dict[str, int] = {}
+        # Build {normalised_time: not_shipped_count} — NOT SHIPPED column only
+        not_shipped: dict[str, int] = {}
         for _group, group in r.json().get("cutOffGroups", {}).items():
             for time_str, statuses in group.get("cutOffTimes", {}).items():
-                miss = 0
-                for _status, bucket in statuses.items():
+                for status_key, bucket in statuses.items():
+                    norm_key = status_key.upper().replace("-", "_").replace(" ", "_")
+                    if norm_key not in _NOT_SHIPPED_KEYS:
+                        continue
                     if isinstance(bucket, dict):
                         cnt = bucket.get("count", {})
                         if isinstance(cnt, dict):
-                            miss += int(cnt.get("pickTickets", 0) or 0)
-                # Normalise: parse then reformat to strip leading zeros / spacing quirks
-                key = _normalise_time(time_str)
-                miss_by_time[key] = miss_by_time.get(key, 0) + miss
+                            val = int(cnt.get("pickTickets", 0) or 0)
+                            key = _normalise_time(time_str)
+                            not_shipped[key] = not_shipped.get(key, 0) + val
 
-        # Map to ordered 20-slot array
-        result = [miss_by_time.get(_normalise_time(ct), 0) for ct in CUT_TIMES]
-        log.info("OTS: %d cut times fetched, total miss=%d", len(miss_by_time), sum(result))
+        # Update only cut times that have already passed
+        updated = 0
+        for i, ct in enumerate(CUT_TIMES):
+            if not ct:
+                continue
+            try:
+                ct_dt = datetime.strptime(ct, "%I:%M %p").replace(
+                    year=now.year, month=now.month, day=now.day
+                )
+            except ValueError:
+                continue
+            if now >= ct_dt:
+                result[i] = not_shipped.get(_normalise_time(ct), 0)
+                updated += 1
+
+        log.info("OTS: updated %d past cut times, total not-shipped=%d", updated, sum(result))
         return result
 
     except Exception as e:
         log.error("Endgame /cutoffs fetch failed: %s", e)
-        return zeros
+        return result
 
 
 def _normalise_time(t: str) -> str:
@@ -502,14 +521,27 @@ def main() -> None:
           f"(NS={eg['blNotShipped']:,}  L={eg['blLoaded']:,}  "
           f"D={eg['blDiverted']:,}  SLA={eg['blShipLabel']:,})")
 
-    # OTS reuses the already-cached Endgame token — no second login
+    # OTS — reuses cached Endgame token, carries forward existing values for future cut times
     try:
+        current_txt = DATA_JS.read_text(encoding="utf-8") if DATA_JS.exists() else "{}"
+        start = current_txt.find("{")
+        end   = current_txt.rfind("}") + 1
+        current_ots = [0] * len(CUT_TIMES)
+        if start != -1 and end:
+            try:
+                current_ots = json.loads(current_txt[start:end]).get("otsData", current_ots)
+            except Exception:
+                pass
+
         eg_token = _endgame_token()
-        ots = fetch_ots(eg_token)
+        ots = fetch_ots(eg_token, current_ots)
         updates["otsData"] = ots
-        total_miss = sum(ots)
-        print(f"   {'✅' if total_miss >= 0 else '⚠️ '} OTS total miss={total_miss:,}  "
-              f"across {sum(1 for v in ots if v > 0)} cut times")
+        past_ct  = sum(1 for ct in CUT_TIMES if ct and
+                       datetime.strptime(ct, "%I:%M %p").replace(
+                           year=datetime.now().year, month=datetime.now().month,
+                           day=datetime.now().day) <= datetime.now())
+        print(f"   ✅ OTS not-shipped total={sum(ots):,}  "
+              f"({past_ct} past cut times checked)")
     except Exception as e:
         log.error("OTS fetch failed: %s", e)
 
