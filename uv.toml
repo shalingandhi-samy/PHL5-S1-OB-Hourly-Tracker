@@ -1,0 +1,5 @@
+[[index]]
+url = "https://pypi.ci.artifacts.walmart.com/artifactory/api/pypi/external-pypi/simple"
+default = true
+
+allow-insecure-host = ["pypi.ci.artifacts.walmart.com"]
