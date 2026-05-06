@@ -937,6 +937,8 @@
             r.goalVol = this.hours.map(h =>
               Math.round(this.lpVolume * h.profile / totalProfile)
             );
+            // Bagging goal = 10% of Goal Volume per hour
+            r.goalBag = r.goalVol.map(v => Math.round(v * 0.10));
           }
           this.totalGoalVol   = r.goalVol.reduce((a,b)   => a + (b||0), 0);
           this.totalActualVol = r.actualVol.reduce((a,b)  => a + (b||0), 0);
