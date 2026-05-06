@@ -312,7 +312,9 @@ def _parse_drax_html(html: str, d: date) -> dict | None:
         col_end   = col_start + _COLS_PER_DAY
 
     n_slots = len(sp_units[col_start:col_end])
-    slots: list[dict] = [{"hour": col_start + i} for i in range(n_slots)]
+    # hour = i means wall-clock hour within the day (0=midnight … 23=11pm).
+    # col_start is a weekly-matrix offset, NOT the hour — do not add it here.
+    slots: list[dict] = [{"hour": i} for i in range(n_slots)]
 
     for dept_name, metric_map in _DEPT_SCRAPE:
         if dept_name not in raw:
@@ -327,6 +329,16 @@ def _parse_drax_html(html: str, d: date) -> dict | None:
                     slots[i][slot_key] = val
                 except ValueError:
                     pass
+
+    all_zero = all(s.get("volume", 0) == 0 for s in slots)
+    if all_zero:
+        log.warning(
+            "DRAX: today's slice [%d:%d] is all-zero — "
+            "data not yet published (Drax batches after shift close). "
+            "Returning None to preserve existing data.js values.",
+            col_start, col_end,
+        )
+        return None
 
     log.info("DRAX: parsed %d slots for %s", n_slots, d)
     return {"hours": slots}
