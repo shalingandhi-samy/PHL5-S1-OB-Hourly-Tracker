@@ -1044,12 +1044,12 @@
             const canvas = await html2canvas(document.body, {
               useCORS:         true,
               allowTaint:      true,
-              scale:           4,
+              scale:           3,
               backgroundColor: '#0d1117',
-              scrollX:         0,
-              scrollY:         0,
-              width:           document.body.scrollWidth,
-              height:          document.body.scrollHeight,
+              scrollX:         -window.scrollX,
+              scrollY:         -window.scrollY,
+              width:           window.innerWidth,
+              height:          window.innerHeight,
             });
             const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
             await navigator.clipboard.write([
