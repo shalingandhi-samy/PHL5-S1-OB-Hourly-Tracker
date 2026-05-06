@@ -40,7 +40,7 @@ FC_ID     = "3124"
 
 DRAX_BASE   = os.getenv("DRAX_BASE_URL",   "https://drax.walmart.com")
 GSCOPE_BASE = os.getenv("GSCOPE_BASE_URL", "https://gscope.walmart.com")
-DRAX_COOKIE   = os.getenv("DRAX_COOKIE",   "")
+# NOTE: DRAX_COOKIE removed — DRAX is now handled by qa-kitten (browser SSO).
 GSCOPE_COOKIE = os.getenv("GSCOPE_COOKIE", "")
 GSCOPE_TOKEN  = os.getenv("GSCOPE_TOKEN",  "")
 
@@ -69,11 +69,11 @@ print("── Config ───────────────────�
 env_file = HERE / ".env"
 row("Config", ".env file exists",      env_file.exists(),
     str(env_file) if env_file.exists() else "Create from .env.example!")
-row("Config", "DRAX_COOKIE set",       bool(DRAX_COOKIE),
-    f"{len(DRAX_COOKIE)} chars" if DRAX_COOKIE else "MISSING — paste from browser DevTools")
 row("Config", "GSCOPE auth set",       bool(GSCOPE_COOKIE or GSCOPE_TOKEN),
     "GSCOPE_TOKEN set" if GSCOPE_TOKEN else
     ("GSCOPE_COOKIE set" if GSCOPE_COOKIE else "MISSING — paste from gscope.walmart.com"))
+row("Config", "DRAX auth",             None,
+    "Handled by qa-kitten scheduler (browser SSO) — no cookie needed")
 
 # ── 2. MSAL token caches ──────────────────────────────────────────────────────
 print("\n── MSAL Token Caches ───────────────────────────────────────────────")
@@ -172,40 +172,8 @@ else:
     row("Endgame", "pt-status /v3",    None, "Skipped — no valid MSAL token")
     row("Endgame", "/cutoffs (OTS)",   None, "Skipped — no valid MSAL token")
 
-# ── 4. DRAX ──────────────────────────────────────────────────────────────────
-print("\n── DRAX ────────────────────────────────────────────────────────────")
-if DRAX_COOKIE:
-    try:
-        date_str = date.today().strftime("%Y-%m-%d")
-        r = requests.get(
-            f"{DRAX_BASE}/building_overview/",
-            params={
-                "date_hour_after":  f"{date_str}+07:00",
-                "date_hour_before": f"{date_str}+23:59",
-                "area": "Outbound",
-            },
-            headers={
-                "Cookie":   DRAX_COOKIE,
-                "Referer":  f"{DRAX_BASE}/",
-                "Accept":   "text/html,*/*",
-                "User-Agent": "Mozilla/5.0",
-            },
-            timeout=15, verify=False,
-        )
-        authed      = r.status_code not in (401, 403)
-        has_data    = "Stationary Picking" in r.text if authed else False
-        row("DRAX", "building_overview",  authed and has_data,
-            f"HTTP {r.status_code}" + (" — Stationary Picking row found" if has_data
-                                        else " — auth OK but no data yet" if authed
-                                        else " — COOKIE EXPIRED"))
-    except Exception as e:
-        row("DRAX", "building_overview", False, str(e)[:60])
-else:
-    row("DRAX", "building_overview", False,
-        "DRAX_COOKIE not set — paste from browser DevTools → Network → Cookie header")
-
-# ── 5. Gscope ────────────────────────────────────────────────────────────────
-print("\n── Gscope ──────────────────────────────────────────────────────────")
+# ── 4. Gscope ─────────────────────────────────────────────────────────────
+print("\n── Gscope ───────────────────────────────────────────────────────────────")
 if GSCOPE_COOKIE or GSCOPE_TOKEN:
     bearer = GSCOPE_TOKEN.replace("Bearer ", "").strip() if GSCOPE_TOKEN else None
     if not bearer and GSCOPE_COOKIE:
@@ -303,8 +271,8 @@ print()
 # ── Expiry Advisory ───────────────────────────────────────────────────────────
 print("── What Can Expire (Read This!) ────────────────────────────────────")
 advisories = [
-    ("DRAX_COOKIE",        "EXPIRES",   "~8–24 hrs",  "Refresh from drax.walmart.com → F12 → Network → Cookie header → paste in .env"),
-    ("GSCOPE_TOKEN/COOKIE","EXPIRES",   "~8–24 hrs",  "Refresh from gscope.walmart.com → F12 → Application → Cookies → gateway_token"),
+    ("GSCOPE_TOKEN/COOKIE","EXPIRES",   "~8–24 hrs",  "Run extract_cookies.bat each morning — Edge opens, SSO handles it."),
+    ("DRAX auth",          "HANDLED",   "Automatic",  "qa-kitten uses browser SSO — no cookie to manage."),
     ("Endgame MSAL",       "SAFE",      "90 days",    "Auto-refreshes silently. If it expires, run fetch_hourly.py manually once to re-auth via device code."),
     ("MS Graph MSAL",      "SAFE",      "90 days",    "Same as above — run fetch_lp_data.py manually once to re-auth."),
     ("Task Scheduler",     "SAFE",      "Permanent",  "Runs as long as you are LOGGED IN. Laptop sleep is fine; full logoff is not."),

@@ -13,15 +13,14 @@ PHL5 OB Hourly Fetch — runs at :15 of each hour, Mon–Thu, 8:15 AM–5:15 PM.
 
 Patches data.js with:
   • Backlog, blNotShipped, blLoaded, blDiverted, blShipLabel  ← Endgame FC 3124
-  • actualVol, asrsUPH, hoursWorked                          ← DRAX Stationary Picking
-  • actualBag                                                ← DRAX Bagging - Manual
-  • boxUPH                                                   ← DRAX Box Finishing
   • capacity (1P / 3P/WFS / SAMS)                           ← Gscope Distributor Capacity
   • otsData (20-slot miss counts per cut time)               ← Endgame /cutoffs
 
+NOTE: DRAX fields (actualVol, asrsUPH, hoursWorked, actualBag, boxUPH) are written
+      by the qa-kitten scheduler task (PHL5_Backlog_QA) — one browser visit, no cookie needed.
+
 Auth:
   • Endgame  — MSAL device-code (cached in .token_cache_endgame.json)
-  • DRAX     — browser session cookie  → DRAX_COOKIE in .env
   • Gscope   — gateway_token / cookie  → GSCOPE_COOKIE or GSCOPE_TOKEN in .env
 """
 
@@ -29,7 +28,6 @@ import json
 import logging
 import msal
 import os
-import re
 import requests
 import sys
 import urllib3
@@ -57,9 +55,6 @@ DATA_JS  = HERE / "data.js"
 EG_CACHE = HERE / ".token_cache_endgame.json"
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DRAX_BASE_URL    = os.getenv("DRAX_BASE_URL",        "https://drax.walmart.com")
-DRAX_COOKIE      = os.getenv("DRAX_COOKIE",          "")
-
 GSCOPE_BASE_URL  = os.getenv("GSCOPE_BASE_URL",      "https://gscope.walmart.com")
 GSCOPE_COOKIE    = os.getenv("GSCOPE_COOKIE",        "")
 GSCOPE_TOKEN     = os.getenv("GSCOPE_TOKEN",         "")
@@ -83,7 +78,7 @@ EG_ENDPOINTS = [
 EG_STATUS_API = "https://status-api.endgame-status.prod.k8s.walmart.net"
 FCAP_BASE     = "https://gscope.walmart.com/api/gateway/fcap"
 
-# Cut times hardcoded in index.html — order MUST match the 20-slot otsData array.
+# Cut times hardcoded in index.html — DRAX arrays are owned by qa-kitten, not this script. — order MUST match the 20-slot otsData array.
 # Empty string at index 19 = spare slot (no cut time assigned).
 CUT_TIMES = [
     "10:31 AM", "10:38 AM", "12:31 PM",  "1:00 PM",  "1:18 PM",
@@ -92,22 +87,6 @@ CUT_TIMES = [
      "4:58 PM",  "5:30 PM",  "5:38 PM",  "5:58 PM",  "",
 ]
 
-# Shift: 7:30 AM–6:00 PM → 11 hourly slots.
-# Wall-clock hour (0-23) for each slot — matches DRAX column index within a day.
-SHIFT_HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-HOUR_TO_IDX = {h: i for i, h in enumerate(SHIFT_HOURS)}
-
-# DRAX HTML scrape — one page pass, three departments.
-_COLS_PER_DAY = 24
-_DEPT_SCRAPE: list[tuple[str, dict[str, str]]] = [
-    ("Stationary Picking", {"units": "volume", "hours": "hours_worked", "uph": "asrs_uph"}),
-    ("Bagging - Manual",   {"units": "bagging"}),
-    ("Box Finishing",      {"uph":   "box_finish_uph"}),
-]
-_METRIC_PAT: dict[str, re.Pattern] = {
-    m: re.compile(rf"matrixmetric\s*=\s*'{m}'>([ \d,.]+)<", re.IGNORECASE)
-    for m in ("units", "hours", "uph")
-}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -256,148 +235,6 @@ def _normalise_time(t: str) -> str:
         except ValueError:
             continue
     return t.strip()  # fallback — keep as-is
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# DRAX
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _days_since_saturday(d: date | None = None) -> int:
-    """Walmart fiscal week starts Saturday. Returns 0=Sat, 1=Sun, 2=Mon …"""
-    d = d or date.today()
-    return (d.weekday() - 5) % 7
-
-
-def _drax_headers() -> dict:
-    return {
-        "Accept": "text/html,application/xhtml+xml,*/*;q=0.9",
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
-        ),
-        "Cookie":   DRAX_COOKIE,
-        "Referer":  f"{DRAX_BASE_URL}/",
-    }
-
-
-def _parse_drax_html(html: str, d: date) -> dict | None:
-    day_offset = _days_since_saturday(d)
-    col_start  = day_offset * _COLS_PER_DAY
-    col_end    = col_start + _COLS_PER_DAY
-
-    raw: dict[str, dict[str, list[str]]] = {}
-    needed = {dept for dept, _ in _DEPT_SCRAPE}
-
-    for row in html.split("<tr"):
-        for dept_name, metric_map in _DEPT_SCRAPE:
-            if dept_name in raw:
-                continue
-            if f"department='{dept_name}'" not in row:
-                continue
-            first_metric = next(iter(metric_map))
-            if not _METRIC_PAT[first_metric].search(row):
-                continue
-            raw[dept_name] = {m: _METRIC_PAT[m].findall(row) for m in metric_map}
-        if raw.keys() >= needed:
-            break
-
-    sp = "Stationary Picking"
-    if sp not in raw:
-        log.warning("DRAX: Stationary Picking row not found — cookie may be stale")
-        return None
-
-    sp_units = raw[sp].get("units", [])
-    if not sp_units[col_start:col_end]:                       # fallback to prev day
-        col_start = max(0, col_start - _COLS_PER_DAY)
-        col_end   = col_start + _COLS_PER_DAY
-
-    n_slots = len(sp_units[col_start:col_end])
-    # hour = i means wall-clock hour within the day (0=midnight … 23=11pm).
-    # col_start is a weekly-matrix offset, NOT the hour — do not add it here.
-    slots: list[dict] = [{"hour": i} for i in range(n_slots)]
-
-    for dept_name, metric_map in _DEPT_SCRAPE:
-        if dept_name not in raw:
-            continue
-        for html_metric, slot_key in metric_map.items():
-            today_vals = raw[dept_name].get(html_metric, [])[col_start:col_end]
-            is_int = slot_key in ("volume", "bagging")
-            for i, raw_str in enumerate(today_vals[:n_slots]):
-                try:
-                    val = (int(raw_str.replace(",", "")) if is_int
-                           else float(raw_str.replace(",", "")))
-                    slots[i][slot_key] = val
-                except ValueError:
-                    pass
-
-    all_zero = all(s.get("volume", 0) == 0 for s in slots)
-    if all_zero:
-        log.warning(
-            "DRAX: today's slice [%d:%d] is all-zero — "
-            "data not yet published (Drax batches after shift close). "
-            "Returning None to preserve existing data.js values.",
-            col_start, col_end,
-        )
-        return None
-
-    log.info("DRAX: parsed %d slots for %s", n_slots, d)
-    return {"hours": slots}
-
-
-def fetch_drax(target_date: date | None = None) -> dict:
-    """Fetch DRAX building_overview; return shift arrays or zeros on failure."""
-    empty_arrays = {
-        "actualVol":   [0]   * len(SHIFT_HOURS),
-        "asrsUPH":     [0.0] * len(SHIFT_HOURS),
-        "boxUPH":      [0.0] * len(SHIFT_HOURS),
-        "actualBag":   [0]   * len(SHIFT_HOURS),
-        "hoursWorked": [0.0] * len(SHIFT_HOURS),
-    }
-
-    if not DRAX_COOKIE:
-        log.warning("DRAX_COOKIE not set in .env — skipping DRAX fetch")
-        return empty_arrays
-
-    d = target_date or date.today()
-    date_str = d.strftime("%Y-%m-%d")
-    url = (
-        f"{DRAX_BASE_URL}/building_overview/"
-        f"?date_hour_after={date_str}+07:00"
-        f"&date_hour_before={date_str}+23:59"
-        f"&area=Outbound"
-    )
-
-    try:
-        r = requests.get(url, headers=_drax_headers(), timeout=30, verify=False)
-    except Exception as e:
-        log.warning("DRAX connection error: %s", e)
-        return empty_arrays
-
-    if r.status_code in (401, 403):
-        log.warning("DRAX auth failed (HTTP %s) — cookie expired", r.status_code)
-        return empty_arrays
-    if r.status_code != 200:
-        log.warning("DRAX returned HTTP %s", r.status_code)
-        return empty_arrays
-
-    parsed = _parse_drax_html(r.text, d)
-    if not parsed:
-        return empty_arrays
-
-    # Map wall-clock hour slots → 11-element shift arrays
-    result = {k: list(v) for k, v in empty_arrays.items()}
-    for slot in parsed["hours"]:
-        wall_hour = slot.get("hour", -1)
-        idx = HOUR_TO_IDX.get(wall_hour)
-        if idx is None:
-            continue
-        result["actualVol"][idx]   = slot.get("volume",       0)
-        result["asrsUPH"][idx]     = slot.get("asrs_uph",     0.0)
-        result["boxUPH"][idx]      = slot.get("box_finish_uph",0.0)
-        result["actualBag"][idx]   = slot.get("bagging",      0)
-        result["hoursWorked"][idx] = slot.get("hours_worked", 0.0)
-
-    return result
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -557,15 +394,7 @@ def main() -> None:
     except Exception as e:
         log.error("OTS fetch failed: %s", e)
 
-    # ── 2. DRAX — Hourly Volume / UPH / Bagging / Hours ────────────────────
-    print("📡 DRAX hourly metrics...")
-    drax = fetch_drax()
-    updates.update(drax)
-    total_vol = sum(drax["actualVol"])
-    print(f"   {'✅' if total_vol else '⚠️ '} actualVol total={total_vol:,} units  "
-          f"| DRAX_COOKIE={'set' if DRAX_COOKIE else 'MISSING — set in .env'}")
-
-    # ── 3. Gscope — OB Capacity ─────────────────────────────────────────────
+    # ── 2. Gscope — OB Capacity ─────────────────────────────────────────────
     print("📡 Gscope OB capacity...")
     capacity = fetch_gscope()
     if capacity:
@@ -576,7 +405,7 @@ def main() -> None:
     else:
         print("   ⚠️  Gscope skipped — set GSCOPE_COOKIE or GSCOPE_TOKEN in .env")
 
-    # ── 4. Write ─────────────────────────────────────────────────────────────
+    # ── 3. Write ─────────────────────────────────────────────────────────────
 
     patch_data_js(**updates)
     print(f"\n✅ Done — {updates.get('lastUpdated', '?')}\n")

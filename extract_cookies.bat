@@ -3,6 +3,7 @@ title PHL5 Cookie Extractor
 echo.
 echo  =======================================================
 echo   PHL5 Cookie Extractor -- Run this each morning
+echo   Grabs Gscope token. DRAX is handled by qa-kitten.
 echo   Edge will open. SSO fires automatically on Walmart VPN.
 echo   Gscope may ask you to log in -- do it in that window.
 echo  =======================================================
