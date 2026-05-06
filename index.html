@@ -676,7 +676,7 @@
                   <span class="font-bold" :class="cap.consumed > cap.planned * 0.8 ? 'text-red-400' : 'text-yellow-300'" x-text="cap.consumed.toLocaleString()"></span>
                 </td>
                 <td>
-                  <span class="font-bold text-green-400" x-text="(cap.planned - cap.consumed).toLocaleString()"></span>
+                  <span class="font-bold text-green-400" x-text="cap.available.toLocaleString()"></span>
                 </td>
               </tr>
             </template>
@@ -685,7 +685,7 @@
               <td class="font-black text-gray-300">TOTAL</td>
               <td class="font-black text-white" x-text="capacity.reduce((s,c) => s+c.planned, 0).toLocaleString()"></td>
               <td class="font-black text-yellow-300" x-text="capacity.reduce((s,c) => s+c.consumed, 0).toLocaleString()"></td>
-              <td class="font-black text-green-400" x-text="capacity.reduce((s,c) => s+c.planned-c.consumed, 0).toLocaleString()"></td>
+              <td class="font-black text-green-400" x-text="capacity.reduce((s,c) => s+c.available, 0).toLocaleString()"></td>
             </tr>
           </tbody>
         </table>
@@ -808,9 +808,9 @@
 
         // ── Capacity ──────────────────────────────────────────
         capacity: [
-          { type: '1P',     planned: 150000, consumed: 41962, color: '#0053e2' },
-          { type: '3P/WFS', planned:  75000, consumed: 23064, color: '#ffc220' },
-          { type: 'SAMS',   planned:  75000, consumed: 23064, color: '#2a8703' },
+          { type: '1P',     pool: 1,  planned: 150000, consumed: 94073,  available: 55927,  color: '#0053e2' },
+          { type: '3P/WFS', pool: 4,  planned:  75000, consumed: 44938,  available: 28597,  color: '#ffc220' },
+          { type: 'SAMS',   pool: 27, planned:  55000, consumed: 50786,  available:  4214,  color: '#2a8703' },
         ],
 
         // ── Config (auto-populated from APIs) ──────────────────────────────────
@@ -892,6 +892,15 @@
           // Hours worked per hour from DRAX - Total Building > Outbound > HOURS
           if (Array.isArray(src.hoursWorked) && src.hoursWorked.length === 11)
             this.rows.hours = src.hoursWorked.map(v => Number(v) || 0);
+          // OB Capacity from GScope (3 pools: 1P, 3P/WFS, SAMS)
+          if (Array.isArray(src.capacity) && src.capacity.length === 3)
+            src.capacity.forEach((c, i) => {
+              if (this.capacity[i]) Object.assign(this.capacity[i], {
+                planned:   Number(c.planned)   || 0,
+                consumed:  Number(c.consumed)  || 0,
+                available: Number(c.available) || 0,
+              });
+            });
           if (src.lastUpdated) {
             const d = new Date(src.lastUpdated);
             this.lpDataTs = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
