@@ -982,7 +982,7 @@
           this.totalGoalBag   = r.goalBag.reduce((a,b)   => a + (b||0), 0);
           this.totalActualBag = r.actualBag.reduce((a,b)  => a + (b||0), 0);
           this.totalHours     = r.hours.reduce((a,b)     => a + (b||0), 0);
-          this.totalOTS       = r.ots.reduce((a,b)       => a + (b||0), 0);
+          this.totalOTS       = this.cutTimes.reduce((s,c) => s + (c.ots||0), 0);
 
           this.overallUPH = this.totalHours > 0
             ? Math.round(this.totalActualVol / this.totalHours).toLocaleString()
