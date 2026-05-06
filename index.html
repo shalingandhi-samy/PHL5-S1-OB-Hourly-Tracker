@@ -602,14 +602,6 @@
               <td class="font-bold text-green-400" x-text="avgBox || '—'"></td>
             </tr>
 
-            <tr>
-              <td>OTS Misses</td>
-              <template x-for="(h, i) in hours" :key="'ots-'+i">
-                <td><span class="data-cell" :class="rows.ots[i] > 0 ? 'text-red-400' : 'dim'" x-text="rows.ots[i] > 0 ? rows.ots[i] : '—'"></span></td>
-              </template>
-              <td class="font-bold" :class="totalOTS > 0 ? 'text-red-400' : 'text-green-400'" x-text="totalOTS > 0 ? totalOTS : '—'"></td>
-            </tr>
-
           </tbody>
         </table>
       </div>
