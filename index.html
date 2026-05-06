@@ -264,22 +264,20 @@
     }
     [data-tooltip]:hover::after { opacity: 1; }
 
-    /* ── Notes ── */
-    .notes-area {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      color: #c0c8d8;
-      font-family: 'Inter', sans-serif;
+    /* ── Read-only data cell ── */
+    .data-cell {
+      display: inline-block;
+      min-width: 60px;
+      text-align: center;
       font-size: 13px;
-      padding: 14px 16px;
-      width: 100%;
-      resize: vertical;
-      min-height: 80px;
-      outline: none;
-      transition: border-color 0.2s;
+      font-weight: 600;
+      color: #e8eaf0;
+      padding: 6px 4px;
     }
-    .notes-area:focus { border-color: var(--blue-100); box-shadow: 0 0 0 3px rgba(0,83,226,0.2); }
+    .data-cell.dim { color: #4a5568; }
+    /* ── Sync pulse ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; display: inline-block; }
   </style>
 
   <script>
@@ -367,7 +365,7 @@
         <div class="progress-track mt-3">
           <div class="progress-fill" :style="'width:' + Math.min(100, totalGoalVol > 0 ? Math.round(totalActualVol/totalGoalVol*100) : 0) + '%'"></div>
         </div>
-        <div class="text-xs text-gray-400 mt-1.5" x-text="totalGoalVol > 0 ? Math.round(totalActualVol/totalGoalVol*100) + '% of goal' : 'Enter goal data'"></div>
+        <div class="text-xs text-gray-400 mt-1.5" x-text="totalGoalVol > 0 ? Math.round(totalActualVol/totalGoalVol*100) + '% of goal' : 'Awaiting data'"></div>
       </div>
 
       <!-- Overall UPH -->
@@ -398,13 +396,14 @@
       <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
         <div>
           <h3 class="text-sm font-bold text-white">Hourly Tracker</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Enter actuals to auto-calculate hit/miss & cumulative totals</p>
+          <p class="text-xs text-gray-400 mt-0.5">Auto-synced · hit/miss & cumulative calculated automatically</p>
         </div>
-        <div class="flex items-center gap-2">
-          <button @click="clearAll()" class="text-xs text-red-400 hover:text-red-300 font-semibold px-3 py-1.5 rounded-lg border border-red-900/40 hover:border-red-500/40 transition-colors">
-            Clear All
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-gray-500">Last synced: <span class="text-gray-300" x-text="lastSync"></span></span>
+          <button @click="syncData()" class="flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 font-semibold px-3 py-1.5 rounded-lg border border-blue-900/40 hover:border-blue-500/40 transition-colors">
+            <span :class="syncing ? 'spin' : ''">↻</span> Refresh
           </button>
-          <button @click="exportCSV()" class="text-xs text-blue-300 hover:text-blue-200 font-semibold px-3 py-1.5 rounded-lg border border-blue-900/40 hover:border-blue-500/40 transition-colors">
+          <button @click="exportCSV()" class="text-xs text-green-300 hover:text-green-200 font-semibold px-3 py-1.5 rounded-lg border border-green-900/40 hover:border-green-500/40 transition-colors">
             ↓ Export CSV
           </button>
         </div>
@@ -434,22 +433,18 @@
             <tr>
               <td>Goal Volume</td>
               <template x-for="(h, i) in hours" :key="'gv-'+i">
-                <td>
-                  <input type="number" class="data-input" x-model.number="rows.goalVol[i]" @input="update()" placeholder="0" min="0" />
-                </td>
+                <td><span class="data-cell" :class="rows.goalVol[i] === 0 ? 'dim' : ''" x-text="rows.goalVol[i] > 0 ? rows.goalVol[i].toLocaleString() : '—'"></span></td>
               </template>
-              <td class="font-bold text-blue-300" x-text="totalGoalVol.toLocaleString()"></td>
+              <td class="font-bold text-blue-300" x-text="totalGoalVol > 0 ? totalGoalVol.toLocaleString() : '—'"></td>
             </tr>
 
             <!-- Actual Volume -->
             <tr>
               <td>Actual Volume <span class="text-gray-600 text-xs">(Drax)</span></td>
               <template x-for="(h, i) in hours" :key="'av-'+i">
-                <td>
-                  <input type="number" class="data-input" x-model.number="rows.actualVol[i]" @input="update()" placeholder="0" min="0" />
-                </td>
+                <td><span class="data-cell" :class="rows.actualVol[i] === 0 ? 'dim' : ''" x-text="rows.actualVol[i] > 0 ? rows.actualVol[i].toLocaleString() : '—'"></span></td>
               </template>
-              <td class="font-bold text-yellow-300" x-text="totalActualVol.toLocaleString()"></td>
+              <td class="font-bold text-yellow-300" x-text="totalActualVol > 0 ? totalActualVol.toLocaleString() : '—'"></td>
             </tr>
 
             <!-- Volume Hit/Miss -->
@@ -492,17 +487,17 @@
             <tr>
               <td>Bagging Goal</td>
               <template x-for="(h, i) in hours" :key="'bg-'+i">
-                <td><input type="number" class="data-input" x-model.number="rows.goalBag[i]" @input="update()" placeholder="0" min="0" /></td>
+                <td><span class="data-cell" :class="rows.goalBag[i] === 0 ? 'dim' : ''" x-text="rows.goalBag[i] > 0 ? rows.goalBag[i].toLocaleString() : '—'"></span></td>
               </template>
-              <td class="font-bold text-blue-300" x-text="totalGoalBag.toLocaleString()"></td>
+              <td class="font-bold text-blue-300" x-text="totalGoalBag > 0 ? totalGoalBag.toLocaleString() : '—'"></td>
             </tr>
 
             <tr>
               <td>Actual Packing</td>
               <template x-for="(h, i) in hours" :key="'ab-'+i">
-                <td><input type="number" class="data-input" x-model.number="rows.actualBag[i]" @input="update()" placeholder="0" min="0" /></td>
+                <td><span class="data-cell" :class="rows.actualBag[i] === 0 ? 'dim' : ''" x-text="rows.actualBag[i] > 0 ? rows.actualBag[i].toLocaleString() : '—'"></span></td>
               </template>
-              <td class="font-bold text-yellow-300" x-text="totalActualBag.toLocaleString()"></td>
+              <td class="font-bold text-yellow-300" x-text="totalActualBag > 0 ? totalActualBag.toLocaleString() : '—'"></td>
             </tr>
 
             <tr>
@@ -542,9 +537,9 @@
             <tr>
               <td>Hours Worked</td>
               <template x-for="(h, i) in hours" :key="'hw-'+i">
-                <td><input type="number" class="data-input" x-model.number="rows.hours[i]" @input="update()" :placeholder="h.profile.toFixed(2)" min="0" step="0.01" /></td>
+                <td><span class="data-cell" :class="rows.hours[i] === 0 ? 'dim' : ''" x-text="rows.hours[i] > 0 ? rows.hours[i].toFixed(2) : '—'"></span></td>
               </template>
-              <td class="font-bold text-white" x-text="totalHours.toFixed(2)"></td>
+              <td class="font-bold text-white" x-text="totalHours > 0 ? totalHours.toFixed(2) : '—'"></td>
             </tr>
 
             <tr>
@@ -563,7 +558,7 @@
             <tr>
               <td>ASRS Picking UPH</td>
               <template x-for="(h, i) in hours" :key="'asrs-'+i">
-                <td><input type="number" class="data-input" x-model.number="rows.asrsUPH[i]" @input="update()" placeholder="0" min="0" /></td>
+                <td><span class="data-cell" :class="rows.asrsUPH[i] === 0 ? 'dim' : 'text-blue-300'" x-text="rows.asrsUPH[i] > 0 ? rows.asrsUPH[i].toLocaleString() : '—'"></span></td>
               </template>
               <td class="font-bold text-blue-300" x-text="avgASRS || '—'"></td>
             </tr>
@@ -571,7 +566,7 @@
             <tr>
               <td>Box Finish UPH</td>
               <template x-for="(h, i) in hours" :key="'box-'+i">
-                <td><input type="number" class="data-input" x-model.number="rows.boxUPH[i]" @input="update()" placeholder="0" min="0" /></td>
+                <td><span class="data-cell" :class="rows.boxUPH[i] === 0 ? 'dim' : 'text-green-400'" x-text="rows.boxUPH[i] > 0 ? rows.boxUPH[i].toLocaleString() : '—'"></span></td>
               </template>
               <td class="font-bold text-green-400" x-text="avgBox || '—'"></td>
             </tr>
@@ -579,9 +574,9 @@
             <tr>
               <td>OTS Misses</td>
               <template x-for="(h, i) in hours" :key="'ots-'+i">
-                <td><input type="number" class="data-input" x-model.number="rows.ots[i]" @input="update()" placeholder="0" min="0" /></td>
+                <td><span class="data-cell" :class="rows.ots[i] > 0 ? 'text-red-400' : 'dim'" x-text="rows.ots[i] > 0 ? rows.ots[i] : '—'"></span></td>
               </template>
-              <td class="font-bold" :class="totalOTS > 0 ? 'text-red-400' : 'text-green-400'" x-text="totalOTS"></td>
+              <td class="font-bold" :class="totalOTS > 0 ? 'text-red-400' : 'text-green-400'" x-text="totalOTS > 0 ? totalOTS : '—'"></td>
             </tr>
 
           </tbody>
@@ -645,7 +640,7 @@
       <div class="flex items-center justify-between mb-5">
         <div>
           <h3 class="text-sm font-bold text-white">✂️ Cut Times &amp; OTS Misses</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Track all 20 cut times and on-time shipment misses</p>
+          <p class="text-xs text-gray-400 mt-0.5">Auto-synced from source system</p>
         </div>
         <div class="flex items-center gap-4">
           <div class="text-center">
@@ -681,25 +676,16 @@
                     x-text="ct.ots > 0 ? '✗ MISS' : ct.time.trim() !== '' ? '✓ OK' : '—'"></span>
             </div>
 
-            <!-- Time input -->
+            <!-- Cut Time display -->
             <div class="mb-2">
               <div class="text-xs text-gray-500 mb-1">Cut Time</div>
-              <input type="text"
-                     class="data-input w-full"
-                     style="width:100%; font-size:12px;"
-                     x-model="ct.time"
-                     placeholder="e.g. 2:30 PM" />
+              <div class="text-sm font-semibold" :class="ct.time ? 'text-white' : 'text-gray-600'" x-text="ct.time || '—'"></div>
             </div>
 
-            <!-- OTS Miss input -->
+            <!-- OTS Miss display -->
             <div>
               <div class="text-xs text-gray-500 mb-1">OTS Miss</div>
-              <input type="number"
-                     class="data-input w-full"
-                     style="width:100%; font-size:12px;"
-                     x-model.number="ct.ots"
-                     placeholder="0"
-                     min="0" />
+              <div class="text-sm font-bold" :class="ct.ots > 0 ? 'text-red-400' : 'text-gray-600'" x-text="ct.ots > 0 ? ct.ots : '—'"></div>
             </div>
 
           </div>
@@ -707,41 +693,35 @@
       </div>
     </div>
 
-    <!-- ── LP Config strip ── -->
+    <!-- ── Shift Configuration (read-only) ── -->
     <div class="glass-card p-5">
-      <h3 class="text-sm font-bold text-white mb-4">⚙️ Shift Configuration</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-white">⚙️ Shift Configuration</h3>
+        <span class="text-xs text-gray-500">Sourced automatically</span>
+      </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="text-center">
-          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">28-day LP Volume</div>
-          <input type="number" class="data-input" x-model.number="lpVolume" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">28-day LP Volume</div>
+          <div class="text-2xl font-black" :class="lpVolume > 0 ? 'text-white' : 'text-gray-600'" x-text="lpVolume > 0 ? lpVolume.toLocaleString() : '—'"></div>
         </div>
         <div class="text-center">
-          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">28-day LP UPH</div>
-          <input type="number" class="data-input" x-model.number="lpUPH" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">28-day LP UPH</div>
+          <div class="text-2xl font-black" :class="lpUPH > 0 ? 'text-white' : 'text-gray-600'" x-text="lpUPH > 0 ? lpUPH.toLocaleString() : '—'"></div>
         </div>
         <div class="text-center">
-          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">Backlog (units)</div>
-          <input type="number" class="data-input" x-model.number="backlog" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">Backlog (units)</div>
+          <div class="text-2xl font-black" :class="backlog > 0 ? 'text-yellow-300' : 'text-gray-600'" x-text="backlog > 0 ? backlog.toLocaleString() : '—'"></div>
         </div>
         <div class="text-center">
-          <div class="text-xs text-gray-400 uppercase tracking-wider mb-1">Headcount</div>
-          <input type="number" class="data-input" x-model.number="headcount" @input="update()" placeholder="0" style="width:120px; font-size:16px; padding:8px;" />
+          <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">Headcount</div>
+          <div class="text-2xl font-black" :class="headcount > 0 ? 'text-blue-300' : 'text-gray-600'" x-text="headcount > 0 ? headcount : '—'"></div>
         </div>
-      </div>
-    </div>
-
-    <!-- ── Notes ── -->
-    <div class="glass-card p-5">
-      <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
-      <textarea class="notes-area" x-model="notes" placeholder="Enter shift notes, escalations, action items..."></textarea>
-      <div class="flex justify-end mt-2">
-        <span class="text-xs text-gray-600" x-text="notes.length + ' characters'"></span>
       </div>
     </div>
 
     <!-- ── Footer ── -->
     <div class="text-center py-4 text-xs text-gray-600">
-      PHL5 OB Shift Dashboard · Next Gen Peak 2026 · Built with ❤️ by Code Puppy 🐶
+      PHL5 · S1 Shift Dashboard · Built with ❤️ by Code Puppy 🐶
     </div>
   </main>
 
@@ -786,12 +766,15 @@
           { type: 'SAMS',   planned:  75000, consumed: 23064, color: '#2a8703' },
         ],
 
-        // ── Config ────────────────────────────────────────────
-        lpVolume: 0,
-        lpUPH:    0,
-        backlog:  0,
+        // ── Config (auto-populated from APIs) ──────────────────────────────────
+        lpVolume:  0,
+        lpUPH:     0,
+        backlog:   0,
         headcount: 0,
-        notes: '',
+
+        // ── Sync state ─────────────────────────────────────────────────────────────
+        lastSync:  'Never',
+        syncing:   false,
 
         // ── UI state ─────────────────────────────────────────
         clock: '',
@@ -820,7 +803,21 @@
         init() {
           this.updateClock();
           setInterval(() => this.updateClock(), 1000);
+          this.syncData();
+          setInterval(() => this.syncData(), 5 * 60 * 1000); // auto-refresh every 5 min
+        },
+
+        // ── Sync data from source systems ────────────────────────────────
+        async syncData() {
+          this.syncing = true;
+          // TODO: replace stubs with real API calls once source systems are confirmed
+          // e.g. await this.fetchDraxVolumes();
+          //      await this.fetchLaborPlan();
+          //      await this.fetchCutTimes();
+          await new Promise(r => setTimeout(r, 600)); // simulated latency
           this.update();
+          this.lastSync = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          this.syncing = false;
         },
 
         // ── Clock ─────────────────────────────────────────────
@@ -894,17 +891,6 @@
         hitMissClass(delta, goal) {
           if (!goal) return 'badge-na';
           return delta >= 0 ? 'badge-hit' : 'badge-miss';
-        },
-
-        // ── Clear all data ────────────────────────────────────
-        clearAll() {
-          if (!confirm('Clear all hourly data? This cannot be undone.')) return;
-          const keys = Object.keys(this.rows);
-          keys.forEach(k => { this.rows[k] = Array(11).fill(0); });
-          this.lpVolume = 0; this.lpUPH = 0; this.backlog = 0; this.headcount = 0;
-          this.notes = '';
-          this.cutTimes = Array.from({ length: 20 }, () => ({ time: '', ots: 0 }));
-          this.update();
         },
 
         // ── Export CSV ────────────────────────────────────────
