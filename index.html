@@ -345,20 +345,6 @@
         </div>
       </div>
 
-      <!-- Center: Current hour indicator -->
-      <div class="hidden lg:flex items-center gap-3 glass-card px-5 py-2.5">
-        <div class="pulse-dot"></div>
-        <div class="text-sm">
-          <span class="text-gray-400 font-medium">Current Hour: </span>
-          <span class="text-white font-bold" x-text="currentHourLabel"></span>
-        </div>
-        <div class="w-px h-4 bg-white/10"></div>
-        <div class="text-sm">
-          <span class="text-gray-400 font-medium">Shift Progress: </span>
-          <span class="font-bold" :class="shiftPctColor" x-text="shiftProgress + '%'"></span>
-        </div>
-      </div>
-
       <!-- Right: Clock + Date -->
       <div class="text-right">
         <div class="text-2xl font-black text-white tabular-nums" x-text="clock"></div>
