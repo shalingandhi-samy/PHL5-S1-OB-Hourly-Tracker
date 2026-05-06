@@ -886,6 +886,9 @@
           // Box Finish UPH per hour from DRAX UPH section (11-element array)
           if (Array.isArray(src.boxUPH) && src.boxUPH.length === 11)
             this.rows.boxUPH = src.boxUPH.map(v => Number(v) || 0);
+          // Actual bagging units per hour from DRAX - Bagging Manual (019034295)
+          if (Array.isArray(src.actualBag) && src.actualBag.length === 11)
+            this.rows.actualBag = src.actualBag.map(v => Number(v) || 0);
           if (src.lastUpdated) {
             const d = new Date(src.lastUpdated);
             this.lpDataTs = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
