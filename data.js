@@ -18,6 +18,7 @@ window.PHL5_DATA = {
     { "type": "3P/WFS", "pool": 4,  "planned": 75000,  "consumed": 44938, "available": 28597,  "color": "#ffc220" },
     { "type": "SAMS",   "pool": 27, "planned": 55000,  "consumed": 50786, "available": 4214,   "color": "#2a8703" }
   ],
+  "otsData":      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   "cellVol":      "HA64",
   "cellUPH":      "HA69",
   "lastUpdated":  "2026-05-05T21:55:00",

@@ -922,6 +922,11 @@
                 available: Number(c.available) || 0,
               });
             });
+          // OTS misses per cut time — captured 1 min after each cut from Endgame NOT SHIPPED
+          if (Array.isArray(src.otsData) && src.otsData.length === 20)
+            src.otsData.forEach((v, i) => {
+              if (this.cutTimes[i]) this.cutTimes[i].ots = Number(v) || 0;
+            });
           if (src.lastUpdated) {
             const d = new Date(src.lastUpdated);
             this.lpDataTs = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
