@@ -291,6 +291,22 @@
       padding: 6px 4px;
     }
     .data-cell.dim { color: #4a5568; }
+    /* ── Cut Times compact table ── */
+    .cut-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .cut-table th {
+      background: rgba(255,255,255,0.05); color: #6b7280;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; padding: 7px 12px; text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .cut-table td {
+      padding: 7px 12px; text-align: center; font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle;
+    }
+    .cut-table tr:last-child td { border-bottom: none; }
+    .cut-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .cut-table .col-sep { width: 1px; padding: 0; background: rgba(255,255,255,0.07); }
+    .cut-table th.col-sep { background: rgba(255,255,255,0.04); }
     /* ── Sync pulse ── */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin 1s linear infinite; display: inline-block; }
@@ -652,12 +668,12 @@
 
     <!-- ── Cut Times & OTS Misses ── -->
     <div class="glass-card p-5">
-      <div class="flex items-center justify-between mb-5">
+      <div class="flex items-center justify-between mb-4">
         <div>
           <h3 class="text-sm font-bold text-white">✂️ Cut Times &amp; OTS Misses</h3>
           <p class="text-xs text-gray-400 mt-0.5">Auto-synced from source system</p>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-5">
           <div class="text-center">
             <div class="text-xs text-gray-500 uppercase tracking-wider">Total OTS Misses</div>
             <div class="text-2xl font-black mt-0.5"
@@ -672,39 +688,45 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        <template x-for="(ct, i) in cutTimes" :key="'ct-'+i">
-          <div class="rounded-xl p-3 border transition-colors"
-               :class="ct.ots > 0
-                 ? 'bg-red-950/30 border-red-800/40'
-                 : ct.time.trim() !== ''
-                   ? 'bg-green-950/20 border-green-800/30'
-                   : 'bg-white/[0.03] border-white/[0.07]'">
-
-            <!-- Cut number badge -->
-            <div class="flex items-center justify-between mb-2.5">
-              <span class="text-xs font-black px-2 py-0.5 rounded-md"
-                    :class="ct.ots > 0 ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/20 text-blue-300'"
-                    x-text="'#' + (i + 1)"></span>
-              <span class="text-xs font-bold"
-                    :class="ct.ots > 0 ? 'text-red-400' : ct.time.trim() !== '' ? 'text-green-400' : 'text-gray-600'"
-                    x-text="ct.ots > 0 ? '✗ MISS' : ct.time.trim() !== '' ? '✓ OK' : '—'"></span>
-            </div>
-
-            <!-- Cut Time display -->
-            <div class="mb-2">
-              <div class="text-xs text-gray-500 mb-1">Cut Time</div>
-              <div class="text-sm font-semibold" :class="ct.time ? 'text-white' : 'text-gray-600'" x-text="ct.time || '—'"></div>
-            </div>
-
-            <!-- OTS Miss display -->
-            <div>
-              <div class="text-xs text-gray-500 mb-1">OTS Miss</div>
-              <div class="text-sm font-bold" :class="ct.ots > 0 ? 'text-red-400' : 'text-gray-600'" x-text="ct.ots > 0 ? ct.ots : '—'"></div>
-            </div>
-
-          </div>
-        </template>
+      <div class="overflow-x-auto">
+        <table class="cut-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Cut Time</th><th>OTS</th>
+              <th class="col-sep"></th>
+              <th>#</th><th>Cut Time</th><th>OTS</th>
+              <th class="col-sep"></th>
+              <th>#</th><th>Cut Time</th><th>OTS</th>
+              <th class="col-sep"></th>
+              <th>#</th><th>Cut Time</th><th>OTS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="row in 5" :key="'cr-'+row">
+              <tr>
+                <!-- Group 1: cuts 1–5 -->
+                <td class="text-gray-500 font-bold" x-text="row"></td>
+                <td :class="cutTimes[row-1].time ? 'text-white font-semibold' : 'text-gray-600'" x-text="cutTimes[row-1].time || '—'"></td>
+                <td :class="cutTimes[row-1].ots > 0 ? 'text-red-400 font-bold' : 'text-gray-600'" x-text="cutTimes[row-1].ots > 0 ? cutTimes[row-1].ots : '—'"></td>
+                <td class="col-sep"></td>
+                <!-- Group 2: cuts 6–10 -->
+                <td class="text-gray-500 font-bold" x-text="row + 5"></td>
+                <td :class="cutTimes[row+4].time ? 'text-white font-semibold' : 'text-gray-600'" x-text="cutTimes[row+4].time || '—'"></td>
+                <td :class="cutTimes[row+4].ots > 0 ? 'text-red-400 font-bold' : 'text-gray-600'" x-text="cutTimes[row+4].ots > 0 ? cutTimes[row+4].ots : '—'"></td>
+                <td class="col-sep"></td>
+                <!-- Group 3: cuts 11–15 -->
+                <td class="text-gray-500 font-bold" x-text="row + 10"></td>
+                <td :class="cutTimes[row+9].time ? 'text-white font-semibold' : 'text-gray-600'" x-text="cutTimes[row+9].time || '—'"></td>
+                <td :class="cutTimes[row+9].ots > 0 ? 'text-red-400 font-bold' : 'text-gray-600'" x-text="cutTimes[row+9].ots > 0 ? cutTimes[row+9].ots : '—'"></td>
+                <td class="col-sep"></td>
+                <!-- Group 4: cuts 16–20 -->
+                <td class="text-gray-500 font-bold" x-text="row + 15"></td>
+                <td :class="cutTimes[row+14].time ? 'text-white font-semibold' : 'text-gray-600'" x-text="cutTimes[row+14].time || '—'"></td>
+                <td :class="cutTimes[row+14].ots > 0 ? 'text-red-400 font-bold' : 'text-gray-600'" x-text="cutTimes[row+14].ots > 0 ? cutTimes[row+14].ots : '—'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
       </div>
     </div>
 
