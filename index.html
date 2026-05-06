@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="data.js"></script>
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     /* ── Walmart Brand Tokens ── */
@@ -460,6 +461,9 @@
           </button>
           <button @click="exportCSV()" class="text-xs text-green-300 hover:text-green-200 font-semibold px-3 py-1.5 rounded-lg border border-green-900/40 hover:border-green-500/40 transition-colors">
             ↓ Export CSV
+          </button>
+          <button id="screenshot-btn" @click="captureScreenshot($el)" class="text-xs text-yellow-300 hover:text-yellow-200 font-semibold px-3 py-1.5 rounded-lg border border-yellow-900/40 hover:border-yellow-500/40 transition-colors">
+            📸 Copy for Teams
           </button>
         </div>
       </div>
@@ -1032,6 +1036,42 @@
           a.download = 'PHL5_OB_Shift_' + new Date().toISOString().slice(0,10) + '.csv';
           a.click();
           URL.revokeObjectURL(url);
+        },
+
+        // ── Screenshot → Clipboard (paste into Teams) ─────────
+        async captureScreenshot(btn) {
+          const orig = btn.innerHTML;
+          btn.innerHTML = '⏳ Capturing...';
+          btn.disabled  = true;
+          try {
+            const canvas = await html2canvas(document.body, {
+              useCORS:       true,
+              allowTaint:    true,
+              scale:         2,
+              backgroundColor: '#0d1117',
+              scrollX:       0,
+              scrollY:       0,
+              width:         document.body.scrollWidth,
+              height:        document.body.scrollHeight,
+            });
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ]);
+            btn.innerHTML = '✓ Copied! Paste in Teams';
+            btn.classList.replace('text-yellow-300', 'text-green-300');
+            btn.classList.replace('border-yellow-900\/40', 'border-green-900\/40');
+            setTimeout(() => {
+              btn.innerHTML = orig;
+              btn.classList.replace('text-green-300', 'text-yellow-300');
+              btn.classList.replace('border-green-900\/40', 'border-yellow-900\/40');
+              btn.disabled = false;
+            }, 3000);
+          } catch (e) {
+            console.error('Screenshot failed:', e);
+            btn.innerHTML = '✗ Failed — allow clipboard access';
+            setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 3000);
+          }
         },
       };
     }
