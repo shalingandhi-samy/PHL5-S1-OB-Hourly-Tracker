@@ -1041,20 +1041,46 @@
           btn.innerHTML = '⏳ Capturing...';
           btn.disabled  = true;
           try {
+            // Scroll to top so header is always in frame
+            const prevScroll = window.scrollY;
+            window.scrollTo(0, 0);
+            await new Promise(r => setTimeout(r, 120)); // let repaint settle
+
             const canvas = await html2canvas(document.body, {
               useCORS:         true,
               allowTaint:      true,
-              scale:           3,
+              scale:           2,
               backgroundColor: '#0d1117',
-              scrollX:         -window.scrollX,
-              scrollY:         -window.scrollY,
-              width:           window.innerWidth,
-              height:          window.innerHeight,
+              scrollX:         0,
+              scrollY:         0,
+              width:           document.body.scrollWidth,
+              height:          document.body.scrollHeight,
             });
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ]);
+
+            window.scrollTo(0, prevScroll); // restore scroll
+
+            // Encode as JPEG (much smaller than PNG → Teams shows inline)
+            const jpgCanvas = document.createElement('canvas');
+            jpgCanvas.width  = canvas.width;
+            jpgCanvas.height = canvas.height;
+            const ctx = jpgCanvas.getContext('2d');
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, jpgCanvas.width, jpgCanvas.height);
+            ctx.drawImage(canvas, 0, 0);
+            const blob = await new Promise(res => jpgCanvas.toBlob(res, 'image/jpeg', 0.92));
+
+            // Try JPEG first; fall back to PNG if browser clipboard rejects it
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({ 'image/jpeg': blob })
+              ]);
+            } catch {
+              const pngBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+              await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': pngBlob })
+              ]);
+            }
+
             btn.innerHTML = '✓ Copied! Paste in Teams';
             btn.classList.replace('text-yellow-300', 'text-green-300');
             btn.classList.replace('border-yellow-900\/40', 'border-green-900\/40');
