@@ -524,7 +524,7 @@
             </tr>
 
             <tr>
-              <td>Actual Packing</td>
+              <td>Actual Bagging</td>
               <template x-for="(h, i) in hours" :key="'ab-'+i">
                 <td><span class="data-cell" :class="rows.actualBag[i] === 0 ? 'dim' : ''" x-text="rows.actualBag[i] > 0 ? rows.actualBag[i].toLocaleString() : '—'"></span></td>
               </template>
