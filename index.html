@@ -593,7 +593,7 @@
             <tr>
               <td>Hours Worked</td>
               <template x-for="(h, i) in hours" :key="'hw-'+i">
-                <td><span class="data-cell" :class="rows.hours[i] === 0 ? 'dim' : ''" x-text="rows.hours[i] > 0 ? rows.hours[i].toFixed(2) : '—'"></span></td>
+                <td><span class="data-cell" :class="rows.hours[i] === 0 ? 'dim' : 'text-white'" x-text="rows.hours[i] > 0 ? rows.hours[i].toFixed(2) : '—'"></span></td>
               </template>
               <td class="font-bold text-white" x-text="totalHours > 0 ? totalHours.toFixed(2) : '—'"></td>
             </tr>
@@ -603,7 +603,7 @@
               <template x-for="(h, i) in hours" :key="'uph-'+i">
                 <td>
                   <span class="text-sm font-bold"
-                        :class="rows.hours[i] > 0 ? 'text-yellow-300' : 'text-gray-600'"
+                        :style="rows.hours[i] > 0 ? 'color:' + uphHeatColor(i) : 'color:#4b5563'"
                         x-text="rows.hours[i] > 0 ? Math.round(rows.actualVol[i] / rows.hours[i]).toLocaleString() : '—'">
                   </span>
                 </td>
@@ -614,17 +614,17 @@
             <tr>
               <td>ASRS Picking UPH</td>
               <template x-for="(h, i) in hours" :key="'asrs-'+i">
-                <td><span class="data-cell" :class="rows.asrsUPH[i] === 0 ? 'dim' : 'text-blue-300'" x-text="rows.asrsUPH[i] > 0 ? rows.asrsUPH[i].toLocaleString() : '—'"></span></td>
+                <td><span class="data-cell" :class="rows.asrsUPH[i] === 0 ? 'dim' : 'text-white'" x-text="rows.asrsUPH[i] > 0 ? rows.asrsUPH[i].toLocaleString() : '—'"></span></td>
               </template>
-              <td class="font-bold text-blue-300" x-text="avgASRS || '—'"></td>
+              <td class="font-bold text-white" x-text="avgASRS || '—'"></td>
             </tr>
 
             <tr>
               <td>Box Finish UPH</td>
               <template x-for="(h, i) in hours" :key="'box-'+i">
-                <td><span class="data-cell" :class="rows.boxUPH[i] === 0 ? 'dim' : 'text-green-400'" x-text="rows.boxUPH[i] > 0 ? rows.boxUPH[i].toLocaleString() : '—'"></span></td>
+                <td><span class="data-cell" :class="rows.boxUPH[i] === 0 ? 'dim' : 'text-white'" x-text="rows.boxUPH[i] > 0 ? rows.boxUPH[i].toLocaleString() : '—'"></span></td>
               </template>
-              <td class="font-bold text-green-400" x-text="avgBox || '—'"></td>
+              <td class="font-bold text-white" x-text="avgBox || '—'"></td>
             </tr>
 
           </tbody>
@@ -1046,6 +1046,24 @@
         hitMissClass(delta, goal) {
           if (!goal) return 'badge-na';
           return delta >= 0 ? 'badge-hit' : 'badge-miss';
+        },
+
+        // ── Actual UPH heat map (green=high, red=low) ─────────────
+        uphHeatColor(i) {
+          if (!this.rows.hours[i]) return '#4b5563';
+          const uph = v => this.rows.hours[v] > 0
+            ? Math.round(this.rows.actualVol[v] / this.rows.hours[v])
+            : null;
+          const vals = this.hours.map((_, j) => uph(j)).filter(v => v !== null);
+          if (!vals.length) return '#ffc220';
+          const min = Math.min(...vals);
+          const max = Math.max(...vals);
+          if (max === min) return '#ffc220'; // all equal → yellow
+          const t = (uph(i) - min) / (max - min); // 0=red, 1=green
+          const r = Math.round(234 * (1 - t) + 42 * t);
+          const g = Math.round(17  * (1 - t) + 135 * t);
+          const b = Math.round(0   * (1 - t) + 3   * t);
+          return `rgb(${r},${g},${b})`;
         },
 
         // ── Export CSV ────────────────────────────────────────
