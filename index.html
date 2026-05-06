@@ -746,34 +746,43 @@
       </div>
     </div>
 
-    <!-- ── Notes (3 panels) ── -->
+    <!-- ── Notes (6 panels, 2 rows of 3) ── -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-      <!-- Panel 1: Shift Notes -->
       <div class="glass-card p-5">
         <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
-        <textarea class="notes-area" x-model="note1" placeholder="General shift notes..."></textarea>
-        <div class="flex justify-end mt-2">
-          <span class="text-xs text-gray-600" x-text="note1.length + ' chars'"></span>
-        </div>
+        <textarea class="notes-area" x-model="note1" placeholder="Notes..."></textarea>
+        <div class="flex justify-end mt-2"><span class="text-xs text-gray-600" x-text="note1.length + ' chars'"></span></div>
       </div>
 
-      <!-- Panel 2: Escalations -->
       <div class="glass-card p-5">
-        <h3 class="text-sm font-bold text-white mb-3">🚨 Escalations</h3>
-        <textarea class="notes-area" x-model="note2" placeholder="Issues requiring escalation..."></textarea>
-        <div class="flex justify-end mt-2">
-          <span class="text-xs text-gray-600" x-text="note2.length + ' chars'"></span>
-        </div>
+        <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+        <textarea class="notes-area" x-model="note2" placeholder="Notes..."></textarea>
+        <div class="flex justify-end mt-2"><span class="text-xs text-gray-600" x-text="note2.length + ' chars'"></span></div>
       </div>
 
-      <!-- Panel 3: Action Items -->
       <div class="glass-card p-5">
-        <h3 class="text-sm font-bold text-white mb-3">✅ Action Items</h3>
-        <textarea class="notes-area" x-model="note3" placeholder="Follow-ups and action items..."></textarea>
-        <div class="flex justify-end mt-2">
-          <span class="text-xs text-gray-600" x-text="note3.length + ' chars'"></span>
-        </div>
+        <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+        <textarea class="notes-area" x-model="note3" placeholder="Notes..."></textarea>
+        <div class="flex justify-end mt-2"><span class="text-xs text-gray-600" x-text="note3.length + ' chars'"></span></div>
+      </div>
+
+      <div class="glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+        <textarea class="notes-area" x-model="note4" placeholder="Notes..."></textarea>
+        <div class="flex justify-end mt-2"><span class="text-xs text-gray-600" x-text="note4.length + ' chars'"></span></div>
+      </div>
+
+      <div class="glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+        <textarea class="notes-area" x-model="note5" placeholder="Notes..."></textarea>
+        <div class="flex justify-end mt-2"><span class="text-xs text-gray-600" x-text="note5.length + ' chars'"></span></div>
+      </div>
+
+      <div class="glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+        <textarea class="notes-area" x-model="note6" placeholder="Notes..."></textarea>
+        <div class="flex justify-end mt-2"><span class="text-xs text-gray-600" x-text="note6.length + ' chars'"></span></div>
       </div>
 
     </div>
@@ -834,6 +843,9 @@
         note1: '',
           note2: '',
           note3: '',
+          note4: '',
+          note5: '',
+          note6: '',
 
         lpDataCell: '',
         lpDataTs:   '',
