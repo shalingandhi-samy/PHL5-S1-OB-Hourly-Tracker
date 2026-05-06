@@ -2,9 +2,10 @@
 // Updated: 2026-05-05T07:30:00
 window.PHL5_DATA = {
   "lpVolume":    150948,
-  "lpUPH":       0,
+  "lpUPH":       77.5,
   "backlog":     0,
-  "cell":        "HA64",
+  "cellVol":     "HA64",
+  "cellUPH":     "HA69",
   "lastUpdated": "2026-05-05T07:30:00",
   "skipped":     false
 };

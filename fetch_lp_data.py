@@ -34,6 +34,7 @@ FILE_PATH   = "/Shared Documents/28 Day Plan/FY26 LP - PHL5.xlsm"
 SHEET_NAME  = "OB 28DP"
 DATE_ROW    = 7     # Row containing daily dates (d-mmm format)
 FORECAST_ROW = 64  # Row containing Processed Units Forecast
+UPH_ROW      = 69  # Row containing Throughput Forecast (LP UPH)
 
 DATA_JS     = Path(__file__).parent / "data.js"
 TOKEN_CACHE = Path(__file__).parent / ".token_cache.json"
@@ -153,7 +154,7 @@ def main():
     # Only run Mon–Thu (weekday 0–3)
     if today.weekday() > 3:
         print(f"📅 Today is {today.strftime('%A')} — S1 shift is Mon–Thu only. Skipping.")
-        write_data_js(lp_volume=None, skipped=True)
+        write_data_js(lp_volume=None, lp_uph=None, skipped=True)
         return
 
     print(f"🚀 PHL5 LP Data Fetcher — {today.strftime('%A, %B %d, %Y')}")
@@ -163,31 +164,36 @@ def main():
     item_id, _ = get_drive_item_id(token, site_id)
 
     col       = find_today_col(token, site_id, item_id)
-    cell_addr = f"{col}{FORECAST_ROW}"
 
-    print(f"📊 Reading cell {cell_addr} (Processed Units Forecast)...")
-    values    = read_range(token, site_id, item_id, cell_addr)
-    raw       = values[0][0] if values and values[0] else None
+    # ── LP Volume (row 64) ────────────────────────────────────────────────────
+    vol_addr  = f"{col}{FORECAST_ROW}"
+    print(f"📊 Reading LP Volume from {vol_addr}...")
+    vol_vals  = read_range(token, site_id, item_id, vol_addr)
+    raw_vol   = vol_vals[0][0] if vol_vals and vol_vals[0] else None
+    lp_volume = int(float(str(raw_vol).replace(",", ""))) if raw_vol is not None else None
+    print(f"✅ LP Volume: {lp_volume:,}" if lp_volume else "⚠️  LP Volume cell empty")
 
-    if raw is None:
-        print(f"⚠️  Cell {cell_addr} is empty.")
-        lp_volume = None
-    else:
-        lp_volume = int(float(str(raw).replace(",", "")))
-        print(f"✅ LP Volume for {today}: {lp_volume:,} units")
+    # ── LP UPH (row 69) ───────────────────────────────────────────────────────
+    uph_addr  = f"{col}{UPH_ROW}"
+    print(f"📊 Reading LP UPH from {uph_addr}...")
+    uph_vals  = read_range(token, site_id, item_id, uph_addr)
+    raw_uph   = uph_vals[0][0] if uph_vals and uph_vals[0] else None
+    lp_uph    = round(float(str(raw_uph).replace(",", "")), 1) if raw_uph is not None else None
+    print(f"✅ LP UPH: {lp_uph}" if lp_uph else "⚠️  LP UPH cell empty")
 
-    write_data_js(lp_volume=lp_volume, cell=cell_addr)
+    write_data_js(lp_volume=lp_volume, lp_uph=lp_uph, cell_vol=vol_addr, cell_uph=uph_addr)
 
 
-def write_data_js(lp_volume, cell: str = "—", skipped: bool = False):
+def write_data_js(lp_volume, lp_uph=None, cell_vol: str = "—", cell_uph: str = "—", skipped: bool = False):
     """Write data.js to the dashboard directory."""
     ts = datetime.now().isoformat(timespec="seconds")
 
     payload = {
         "lpVolume":    lp_volume or 0,
-        "lpUPH":       0,
+        "lpUPH":       lp_uph or 0,
         "backlog":     0,
-        "cell":        cell,
+        "cellVol":     cell_vol,
+        "cellUPH":     cell_uph,
         "lastUpdated": ts,
         "skipped":     skipped,
     }

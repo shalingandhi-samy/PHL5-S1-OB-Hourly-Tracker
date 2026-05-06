@@ -407,7 +407,8 @@
           <div class="text-3xl font-black text-white" x-text="lpUPH > 0 ? lpUPH.toLocaleString() : '—'"></div>
           <div class="text-sm text-gray-400 mb-1" x-show="lpUPH > 0">units/hr</div>
         </div>
-        <div class="text-xs text-gray-600 mt-3">Labor Plan UPH target</div>
+        <div class="text-xs text-gray-600 mt-3" x-show="lpDataTs" x-text="'Updated ' + lpDataTs"></div>
+        <div class="text-xs text-gray-600 mt-3" x-show="!lpDataTs">Labor Plan UPH target</div>
       </div>
 
       <!-- Total Backlog -->
