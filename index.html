@@ -914,19 +914,20 @@
           if (Array.isArray(src.hoursWorked) && src.hoursWorked.length === 11)
             this.rows.hours = src.hoursWorked.map(v => Number(v) || 0);
           // OB Capacity from GScope (3 pools: 1P, 3P/WFS, SAMS)
+          // Replace full array items so Alpine.js Proxy detects the change
           if (Array.isArray(src.capacity) && src.capacity.length === 3)
-            src.capacity.forEach((c, i) => {
-              if (this.capacity[i]) Object.assign(this.capacity[i], {
-                planned:   Number(c.planned)   || 0,
-                consumed:  Number(c.consumed)  || 0,
-                available: Number(c.available) || 0,
-              });
-            });
-          // OTS misses per cut time — captured 1 min after each cut from Endgame NOT SHIPPED
+            this.capacity = this.capacity.map((c, i) => ({
+              ...c,
+              planned:   Number(src.capacity[i].planned)   || 0,
+              consumed:  Number(src.capacity[i].consumed)  || 0,
+              available: Number(src.capacity[i].available) || 0,
+            }));
+          // OTS misses — replace full cutTimes array so Alpine.js reacts
           if (Array.isArray(src.otsData) && src.otsData.length === 20)
-            src.otsData.forEach((v, i) => {
-              if (this.cutTimes[i]) this.cutTimes[i].ots = Number(v) || 0;
-            });
+            this.cutTimes = this.cutTimes.map((ct, i) => ({
+              ...ct,
+              ots: Number(src.otsData[i]) || 0,
+            }));
           if (src.lastUpdated) {
             const d = new Date(src.lastUpdated);
             this.lpDataTs = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
