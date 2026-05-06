@@ -746,13 +746,36 @@
       </div>
     </div>
 
-    <!-- ── Notes ── -->
-    <div class="glass-card p-5">
-      <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
-      <textarea class="notes-area" x-model="notes" placeholder="Enter shift notes, escalations, action items..."></textarea>
-      <div class="flex justify-end mt-2">
-        <span class="text-xs text-gray-600" x-text="notes.length + ' characters'"></span>
+    <!-- ── Notes (3 panels) ── -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      <!-- Panel 1: Shift Notes -->
+      <div class="glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+        <textarea class="notes-area" x-model="note1" placeholder="General shift notes..."></textarea>
+        <div class="flex justify-end mt-2">
+          <span class="text-xs text-gray-600" x-text="note1.length + ' chars'"></span>
+        </div>
       </div>
+
+      <!-- Panel 2: Escalations -->
+      <div class="glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-3">🚨 Escalations</h3>
+        <textarea class="notes-area" x-model="note2" placeholder="Issues requiring escalation..."></textarea>
+        <div class="flex justify-end mt-2">
+          <span class="text-xs text-gray-600" x-text="note2.length + ' chars'"></span>
+        </div>
+      </div>
+
+      <!-- Panel 3: Action Items -->
+      <div class="glass-card p-5">
+        <h3 class="text-sm font-bold text-white mb-3">✅ Action Items</h3>
+        <textarea class="notes-area" x-model="note3" placeholder="Follow-ups and action items..."></textarea>
+        <div class="flex justify-end mt-2">
+          <span class="text-xs text-gray-600" x-text="note3.length + ' chars'"></span>
+        </div>
+      </div>
+
     </div>
 
     <!-- ── Footer ── -->
@@ -808,7 +831,9 @@
         backlog:   0,
         headcount: 0,
 
-        notes: '',
+        note1: '',
+          note2: '',
+          note3: '',
 
         lpDataCell: '',
         lpDataTs:   '',
