@@ -264,7 +264,23 @@
     }
     [data-tooltip]:hover::after { opacity: 1; }
 
-    /* ── Read-only data cell ── */
+    /* ── Notes ── */
+    .notes-area {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      color: #c0c8d8;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      padding: 14px 16px;
+      width: 100%;
+      resize: vertical;
+      min-height: 100px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .notes-area:focus { border-color: var(--blue-100); box-shadow: 0 0 0 3px rgba(0,83,226,0.2); }
+    .notes-area::placeholder { color: rgba(255,255,255,0.2); }
     .data-cell {
       display: inline-block;
       min-width: 60px;
@@ -719,6 +735,15 @@
       </div>
     </div>
 
+    <!-- ── Notes ── -->
+    <div class="glass-card p-5">
+      <h3 class="text-sm font-bold text-white mb-3">📝 Shift Notes</h3>
+      <textarea class="notes-area" x-model="notes" placeholder="Enter shift notes, escalations, action items..."></textarea>
+      <div class="flex justify-end mt-2">
+        <span class="text-xs text-gray-600" x-text="notes.length + ' characters'"></span>
+      </div>
+    </div>
+
     <!-- ── Footer ── -->
     <div class="text-center py-4 text-xs text-gray-600">
       PHL5 · S1 Shift Dashboard · Built with ❤️ by Code Puppy 🐶
@@ -771,6 +796,8 @@
         lpUPH:     0,
         backlog:   0,
         headcount: 0,
+
+        notes: '',
 
         // ── Sync state ─────────────────────────────────────────────────────────────
         lastSync:  'Never',
