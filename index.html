@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PHL5 — OB Shift Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="data.js"></script>
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
@@ -396,7 +397,11 @@
         <div class="flex items-end gap-2">
           <div class="text-3xl font-black text-white" x-text="lpVolume > 0 ? lpVolume.toLocaleString() : '—'"></div>
         </div>
-        <div class="text-xs text-gray-600 mt-3">Labor Plan target volume</div>
+        <div class="text-xs text-gray-500 mt-3">
+          <span x-show="lpDataCell" x-text="'Cell ' + lpDataCell + ' · OB 28DP'"></span>
+          <span x-show="!lpDataCell">Labor Plan target volume</span>
+        </div>
+        <div class="text-xs text-gray-600 mt-0.5" x-show="lpDataTs" x-text="'Updated ' + lpDataTs"></div>
       </div>
 
       <!-- 28 Day LP UPH -->
@@ -819,6 +824,9 @@
 
         notes: '',
 
+        lpDataCell: '',
+        lpDataTs:   '',
+
         // ── Sync state ─────────────────────────────────────────────────────────────
         lastSync:  'Never',
         syncing:   false,
@@ -857,11 +865,17 @@
         // ── Sync data from source systems ────────────────────────────────
         async syncData() {
           this.syncing = true;
-          // TODO: replace stubs with real API calls once source systems are confirmed
-          // e.g. await this.fetchDraxVolumes();
-          //      await this.fetchLaborPlan();
-          //      await this.fetchCutTimes();
-          await new Promise(r => setTimeout(r, 600)); // simulated latency
+          // ── Load data written by fetch_lp_data.py (data.js) ────────────────────────
+          const src = window.PHL5_DATA || {};
+          if (src.lpVolume)  this.lpVolume  = src.lpVolume;
+          if (src.lpUPH)     this.lpUPH     = src.lpUPH;
+          if (src.backlog)   this.backlog   = src.backlog;
+          if (src.cell)      this.lpDataCell = src.cell;
+          if (src.lastUpdated) {
+            const d = new Date(src.lastUpdated);
+            this.lpDataTs = d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          }
+          await new Promise(r => setTimeout(r, 300));
           this.update();
           this.lastSync = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           this.syncing = false;
