@@ -1,0 +1,15 @@
+# Auth token caches — never commit these
+.token_cache_*.json
+
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
