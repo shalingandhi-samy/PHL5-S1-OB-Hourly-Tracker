@@ -171,7 +171,7 @@ def post_to_teams(img_bytes: bytes, token: str) -> None:
         "body": {
             "contentType": "html",
             "content": (
-                f"<p><b>PHL5 S1 OB Hourly Tracker &mdash; {now_label}</b></p>"
+                f"<p><b>PHL5 OB S1 &mdash; {now_label}</b></p>"
                 f'<img src="../hostedContents/1/$value">'
             ),
         },
